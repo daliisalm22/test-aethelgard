@@ -136,6 +136,43 @@ window.addEventListener('touchend', () => {
     isMouseDown = false;
 });
 
+const permissionBtn = document.getElementById('request-permission-btn');
+const alphaElem = document.getElementById('alpha');
+const betaElem = document.getElementById('beta');
+const gammaElem = document.getElementById('gamma');
+
+if (permissionBtn) {
+    permissionBtn.addEventListener('click', () => {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(response => {
+                    if (response === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        permissionBtn.style.display = 'none';
+                    }
+                })
+                .catch(console.error);
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+            permissionBtn.style.display = 'none';
+        }
+    });
+}
+
+function handleOrientation(e) {
+    const alpha = e.alpha || 0;
+    const beta = e.beta || 0;
+    const gamma = e.gamma || 0;
+
+    if (alphaElem) alphaElem.textContent = alpha.toFixed(1);
+    if (betaElem) betaElem.textContent = beta.toFixed(1);
+    if (gammaElem) gammaElem.textContent = gamma.toFixed(1);
+
+    targetRotationY = THREE.MathUtils.degToRad(alpha);
+    targetRotationX = THREE.MathUtils.degToRad(beta - 90);
+    targetRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, targetRotationX));
+}
+
 function animate() {
     requestAnimationFrame(animate);
 

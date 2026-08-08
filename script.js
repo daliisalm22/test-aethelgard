@@ -1,12 +1,14 @@
 window.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('starCanvas');
     if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
 
     function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     }
+
     window.addEventListener('resize', resize);
     resize();
 
@@ -16,54 +18,115 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const worldSize = 3000;
 
-    // Debug values for screen display
-    let rawAlpha = 0, rawBeta = 0, rawGamma = 0;
+    let rawAlpha = 0;
+    let rawBeta = 0;
+    let rawGamma = 0;
     let motionActive = false;
 
-    // 1. Tiny Decoration Stars (Background atmosphere)
+    const starImages = {
+        small: new Image(),
+        medium: new Image(),
+        large: new Image()
+    };
+
+    starImages.small.src = 'small_star.png';
+    starImages.medium.src = 'medium_star.png';
+    starImages.large.src = 'large_star.png';
+
+    function getRandomStarImage() {
+        const random = Math.random();
+
+        if (random < 0.055) {
+            return {
+                image: starImages.large,
+                type: 'large'
+            };
+        }
+
+        if (random < 0.15) {
+            return {
+                image: starImages.medium,
+                type: 'medium'
+            };
+        }
+
+        return {
+            image: starImages.small,
+            type: 'small'
+        };
+    }
+
+    function getImageForSize(size) {
+        if (size >= 2.2) {
+            return starImages.large;
+        }
+
+        if (size >= 1.3) {
+            return starImages.medium;
+        }
+
+        return starImages.small;
+    }
+
     const decoStars = [];
+
     for (let i = 0; i < 300; i++) {
+        const selectedStar = getRandomStarImage();
+
+        let size;
+
+        if (selectedStar.type === 'large') {
+            size = Math.random() * 2 + 3.5;
+        } else if (selectedStar.type === 'medium') {
+            size = Math.random() * 0.8 + 1.8;
+        } else {
+            size = Math.random() * 0.8 + 0.7;
+        }
+
         decoStars.push({
             x: (Math.random() - 0.5) * worldSize,
             y: (Math.random() - 0.5) * worldSize,
-            size: Math.random() * 1.5 + 0.5,
-            baseAlpha: Math.random() * 0.4 + 0.1,
+            size: size,
+            image: selectedStar.image,
+            baseAlpha: Math.random() * 0.35 + 0.1,
             twinkleSpeed: Math.random() * 0.015 + 0.002,
             twinkleOffset: Math.random() * Math.PI * 2
         });
     }
 
-    // 2. Large Interactive "Legend" Stars
     const legendStars = [
         {
-            x: -200, y: -150,
+            x: -200,
+            y: -150,
             size: 6,
-            color: '#38bdf8',
+            image: starImages.large,
             title: "The First Horizon",
             secret: "I left my hometown just to prove I could do it, but I miss my mom's cooking every single day.",
-            image: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=600&auto=format&fit=crop&q=80"
+            imageUrl: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=600&auto=format&fit=crop&q=80"
         },
         {
-            x: 400, y: 200,
+            x: 400,
+            y: 200,
             size: 7,
-            color: '#fbbf24',
+            image: starImages.large,
             title: "Grandfather's Echo",
             secret: "I still keep a voicemail from my grandfather saved just to hear his laugh on hard days.",
-            image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80"
+            imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80"
         },
         {
-            x: -500, y: 350,
+            x: -500,
+            y: 350,
             size: 5,
-            color: '#f472b6',
+            image: starImages.large,
             title: "Midnight Manuscript",
             secret: "I wrote a whole novel in secret and I'm still too scared to show a single soul.",
-            image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80"
+            imageUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80"
         }
     ];
 
-    // --- MOUSE CONTROLS (Desktop Fallback) ---
     window.addEventListener('mousedown', (e) => {
-        if (motionActive) return; // Disable mouse drag if phone tilt is active
+        if (motionActive) return;
+
         isDragging = true;
         startX = e.clientX - camera.x;
         startY = e.clientY - camera.y;
@@ -71,6 +134,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('mousemove', (e) => {
         if (!isDragging || motionActive) return;
+
         camera.x = e.clientX - startX;
         camera.y = e.clientY - startY;
     });
@@ -79,175 +143,389 @@ window.addEventListener('DOMContentLoaded', () => {
         isDragging = false;
     });
 
-    // --- GYROSCOPE / DEVICE ORIENTATION CONTROLS (Mobile 3D Tilt) ---
-if (window.DeviceOrientationEvent) {
-        window.addEventListener('deviceorientation', (event) => {
-            // Let's check if the event is actually firing data
-            console.log("Event fired!", event.alpha, event.beta, event.gamma);
+    function handleOrientation(event) {
+        rawAlpha = event.alpha !== null ? Math.round(event.alpha) : 0;
+        rawBeta = event.beta !== null ? Math.round(event.beta) : 0;
+        rawGamma = event.gamma !== null ? Math.round(event.gamma) : 0;
 
-            rawAlpha = event.alpha ? Math.round(event.alpha) : 0;
-            rawBeta = event.beta ? Math.round(event.beta) : 0;
-            rawGamma = event.gamma ? Math.round(event.gamma) : 0;
+        const alphaElement = document.getElementById('debugAlpha');
+        const betaElement = document.getElementById('debugBeta');
+        const gammaElement = document.getElementById('debugGamma');
 
-            document.getElementById('debugAlpha').innerText = rawAlpha;
-            document.getElementById('debugBeta').innerText = rawBeta;
-            document.getElementById('debugGamma').innerText = rawGamma;
+        if (alphaElement) {
+            alphaElement.innerText = rawAlpha;
+        }
 
-            if (event.beta !== null || event.gamma !== null) {
-                motionActive = true;
-                const targetX = (canvas.width / 2) - worldSize/2 + (rawGamma * 15);
-                const targetY = (canvas.height / 2) - worldSize/2 + ((rawBeta - 45) * 15);
-                
-                camera.x += (targetX - camera.x) * 0.1;
-                camera.y += (targetY - camera.y) * 0.1;
-            }
-        });
-    } else {
-        alert("Device Orientation is not supported on this browser.");
+        if (betaElement) {
+            betaElement.innerText = rawBeta;
+        }
+
+        if (gammaElement) {
+            gammaElement.innerText = rawGamma;
+        }
+
+        if (event.beta !== null || event.gamma !== null) {
+            motionActive = true;
+
+            const targetX =
+                (canvas.width / 2) -
+                worldSize / 2 +
+                (rawGamma * 15);
+
+            const targetY =
+                (canvas.height / 2) -
+                worldSize / 2 +
+                ((rawBeta - 45) * 15);
+
+            camera.x += (targetX - camera.x) * 0.1;
+            camera.y += (targetY - camera.y) * 0.1;
+        }
     }
 
-    // iOS Permission Request Helper Button handler
-const gyroBtn = document.getElementById('enableGyroBtn');
+    if (
+        window.DeviceOrientationEvent &&
+        typeof DeviceOrientationEvent.requestPermission !== 'function'
+    ) {
+        window.addEventListener(
+            'deviceorientation',
+            handleOrientation
+        );
+    }
+
+    const gyroBtn = document.getElementById('enableGyroBtn');
+
     if (gyroBtn) {
         gyroBtn.addEventListener('click', () => {
-            // Check if iOS 13+ permission request is needed
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            if (
+                typeof DeviceOrientationEvent !== 'undefined' &&
+                typeof DeviceOrientationEvent.requestPermission === 'function'
+            ) {
                 DeviceOrientationEvent.requestPermission()
                     .then(response => {
                         if (response === 'granted') {
                             gyroBtn.style.display = 'none';
-                            window.addEventListener('deviceorientation', handleOrientation);
+
+                            window.addEventListener(
+                                'deviceorientation',
+                                handleOrientation
+                            );
                         } else {
                             alert("Permission denied for motion sensors.");
                         }
                     })
-                    .catch(err => console.error(err));
+                    .catch(err => {
+                        console.error(err);
+                    });
             } else {
-                // Non-iOS devices (Android, etc.) handle this automatically
                 gyroBtn.style.display = 'none';
-                window.addEventListener('deviceorientation', handleOrientation);
+
+                if (window.DeviceOrientationEvent) {
+                    window.addEventListener(
+                        'deviceorientation',
+                        handleOrientation
+                    );
+                }
             }
         });
     }
 
-    function handleOrientation(event) {
-        rawAlpha = event.alpha ? Math.round(event.alpha) : 0;
-        rawBeta = event.beta ? Math.round(event.beta) : 0;
-        rawGamma = event.gamma ? Math.round(event.gamma) : 0;
-
-        document.getElementById('debugAlpha').innerText = rawAlpha;
-        document.getElementById('debugBeta').innerText = rawBeta;
-        document.getElementById('debugGamma').innerText = rawGamma;
-
-        motionActive = true;
-        const targetX = (canvas.width / 2) - worldSize/2 + (rawGamma * 15);
-        const targetY = (canvas.height / 2) - worldSize/2 + ((rawBeta - 45) * 15);
-        
-        camera.x += (targetX - camera.x) * 0.1;
-        camera.y += (targetY - camera.y) * 0.1;
-    }
-
-    // Click detection for legend stars
     window.addEventListener('click', (e) => {
-        if (e.target.closest('#secretModal') || e.target.closest('#enableGyroBtn')) return;
+        if (
+            e.target.closest('#secretModal') ||
+            e.target.closest('#enableGyroBtn')
+        ) {
+            return;
+        }
 
         const mouseX = e.clientX;
         const mouseY = e.clientY;
 
         legendStars.forEach(star => {
-            const screenX = (star.x + worldSize / 2) * camera.zoom + camera.x;
-            const screenY = (star.y + worldSize / 2) * camera.zoom + camera.y;
+            const screenX =
+                (star.x + worldSize / 2) *
+                camera.zoom +
+                camera.x;
 
-            const distance = Math.hypot(mouseX - screenX, mouseY - screenY);
-            
-            if (distance < (star.size * camera.zoom) + 20) {
+            const screenY =
+                (star.y + worldSize / 2) *
+                camera.zoom +
+                camera.y;
+
+            const distance = Math.hypot(
+                mouseX - screenX,
+                mouseY - screenY
+            );
+
+            if (
+                distance <
+                (star.size * camera.zoom) + 20
+            ) {
                 showSecretModal(star);
             }
         });
     });
 
-    // Render Loop
-    function animate(timestamp) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function drawStar(star, timestamp) {
+        const screenX =
+            (star.x + worldSize / 2) *
+            camera.zoom +
+            camera.x;
 
-        // Background Gradient
-        const bgGradient = ctx.createRadialGradient(
-            canvas.width / 2, canvas.height / 2, 50,
-            canvas.width / 2, canvas.height / 2, canvas.width
+        const screenY =
+            (star.y + worldSize / 2) *
+            camera.zoom +
+            camera.y;
+
+        if (
+            screenX < -50 ||
+            screenX > canvas.width + 50 ||
+            screenY < -50 ||
+            screenY > canvas.height + 50
+        ) {
+            return;
+        }
+
+        const alpha =
+            star.baseAlpha +
+            Math.sin(
+                timestamp * star.twinkleSpeed +
+                star.twinkleOffset
+            ) * 0.15;
+
+        const finalAlpha = Math.max(
+            0.03,
+            Math.min(1, alpha)
         );
-        bgGradient.addColorStop(0, '#0b0f19');
-        bgGradient.addColorStop(1, '#030712');
+
+        const image = star.image;
+
+        if (
+            !image ||
+            !image.complete ||
+            image.naturalWidth === 0
+        ) {
+            return;
+        }
+
+        const aspectRatio =
+            image.naturalWidth / image.naturalHeight;
+
+        let width =
+            star.size *
+            2 *
+            camera.zoom;
+
+        let height =
+            width / aspectRatio;
+
+        if (height > star.size * 2 * camera.zoom) {
+            height =
+                star.size *
+                2 *
+                camera.zoom;
+
+            width =
+                height *
+                aspectRatio;
+        }
+
+        ctx.save();
+
+        ctx.globalAlpha = finalAlpha;
+
+        ctx.drawImage(
+            image,
+            screenX - width / 2,
+            screenY - height / 2,
+            width,
+            height
+        );
+
+        ctx.restore();
+    }
+
+    function animate(timestamp) {
+        ctx.clearRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+        const bgGradient = ctx.createRadialGradient(
+            canvas.width / 2,
+            canvas.height / 2,
+            50,
+            canvas.width / 2,
+            canvas.height / 2,
+            canvas.width
+        );
+
+        bgGradient.addColorStop(
+            0,
+            '#0b0f19'
+        );
+
+        bgGradient.addColorStop(
+            1,
+            '#030712'
+        );
+
         ctx.fillStyle = bgGradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw Decoration Stars
+        ctx.fillRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
         decoStars.forEach(star => {
-            const alpha = star.baseAlpha + Math.sin(timestamp * star.twinkleSpeed + star.twinkleOffset) * 0.15;
-            const screenX = (star.x + worldSize / 2) * camera.zoom + camera.x;
-            const screenY = (star.y + worldSize / 2) * camera.zoom + camera.y;
-
-            if (screenX < -20 || screenX > canvas.width + 20 || screenY < -20 || screenY > canvas.height + 20) return;
-
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, star.size * camera.zoom, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(248, 250, 252, ${Math.max(0.05, alpha)})`;
-            ctx.fill();
+            drawStar(star, timestamp);
         });
 
-        // Draw Legend Stars
         legendStars.forEach(star => {
-            const screenX = (star.x + worldSize / 2) * camera.zoom + camera.x;
-            const screenY = (star.y + worldSize / 2) * camera.zoom + camera.y;
+            const screenX =
+                (star.x + worldSize / 2) *
+                camera.zoom +
+                camera.x;
 
-            if (screenX < -50 || screenX > canvas.width + 50 || screenY < -50 || screenY > canvas.height + 50) return;
+            const screenY =
+                (star.y + worldSize / 2) *
+                camera.zoom +
+                camera.y;
 
-            // Outer Glow ring
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, (star.size + 8) * camera.zoom, 0, Math.PI * 2);
-            ctx.fillStyle = star.color;
-            ctx.globalAlpha = 0.3;
-            ctx.fill();
-            ctx.globalAlpha = 1.0;
+            if (
+                screenX < -50 ||
+                screenX > canvas.width + 50 ||
+                screenY < -50 ||
+                screenY > canvas.height + 50
+            ) {
+                return;
+            }
 
-            // Core Star
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, star.size * camera.zoom, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = star.color;
-            ctx.fill();
-            ctx.shadowBlur = 0; 
+            const image = star.image;
 
-            // Title label
-            ctx.font = '12px Inter, sans-serif';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            if (
+                !image ||
+                !image.complete ||
+                image.naturalWidth === 0
+            ) {
+                return;
+            }
+
+            const aspectRatio =
+                image.naturalWidth /
+                image.naturalHeight;
+
+            const width =
+                star.size *
+                2 *
+                camera.zoom;
+
+            const height =
+                width /
+                aspectRatio;
+
+            ctx.save();
+
+            ctx.globalAlpha = 1;
+
+            ctx.drawImage(
+                image,
+                screenX - width / 2,
+                screenY - height / 2,
+                width,
+                height
+            );
+
+            ctx.restore();
+
+            ctx.font =
+                '12px Inter, sans-serif';
+
+            ctx.fillStyle =
+                'rgba(255, 255, 255, 0.8)';
+
             ctx.textAlign = 'center';
-            ctx.fillText(star.title, screenX, screenY + (star.size * camera.zoom) + 18);
+
+            ctx.fillText(
+                star.title,
+                screenX,
+                screenY +
+                (star.size * camera.zoom) +
+                18
+            );
         });
 
         requestAnimationFrame(animate);
     }
 
-    // Modal Controls
     function showSecretModal(starData) {
-        document.getElementById('modalTitle').innerText = starData.title;
-        document.getElementById('secretText').innerText = `"${starData.secret}"`;
-        document.getElementById('modalImage').src = starData.image;
-        document.getElementById('secretModal').classList.remove('hidden');
+        document.getElementById('modalTitle').innerText =
+            starData.title;
+
+        document.getElementById('secretText').innerText =
+            `"${starData.secret}"`;
+
+        document.getElementById('modalImage').src =
+            starData.imageUrl;
+
+        document
+            .getElementById('secretModal')
+            .classList.remove('hidden');
     }
 
     function closeModal() {
-        document.getElementById('secretModal').classList.add('hidden');
+        document
+            .getElementById('secretModal')
+            .classList.add('hidden');
     }
 
-    const closeBtn = document.getElementById('closeModalBtn');
+    const closeBtn =
+        document.getElementById('closeModalBtn');
+
     if (closeBtn) {
-        closeBtn.addEventListener('click', closeModal);
+        closeBtn.addEventListener(
+            'click',
+            closeModal
+        );
     }
 
-    // Initialize camera centering
-    camera.x = (canvas.width - worldSize) / 2;
-    camera.y = (canvas.height - worldSize) / 2;
+    camera.x =
+        (canvas.width - worldSize) / 2;
 
-    requestAnimationFrame(animate);
+    camera.y =
+        (canvas.height - worldSize) / 2;
+
+    const images = [
+        starImages.small,
+        starImages.medium,
+        starImages.large
+    ];
+
+    let loadedImages = 0;
+
+    function checkImagesLoaded() {
+        loadedImages++;
+
+        if (loadedImages === images.length) {
+            requestAnimationFrame(animate);
+        }
+    }
+
+    images.forEach(image => {
+        if (
+            image.complete &&
+            image.naturalWidth > 0
+        ) {
+            checkImagesLoaded();
+        } else {
+            image.addEventListener(
+                'load',
+                checkImagesLoaded,
+                { once: true }
+            );
+        }
+    });
 });

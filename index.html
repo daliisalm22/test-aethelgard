@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constellation of Confessions</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Inline critical styles so it never breaks -->
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #030712 !important; /* Force dark background */
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+        }
+        canvas {
+            display: block;
+            cursor: grab;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="relative text-white bg-[#030712] w-full h-screen overflow-hidden">
+
+    <!-- UI Overlay / Header -->
+    <div class="absolute top-6 left-6 z-10 pointer-events-none">
+        <h1 class="text-2xl font-bold tracking-wider text-slate-100">THE OBSERVATORY</h1>
+        <p class="text-xs text-slate-400">Pan across the night sky. Click glowing legend stars to inspect memories.</p>
+    </div>
+
+    <!-- Hidden Star Secret Modal -->
+    <div id="secretModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md transition-opacity">
+        <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-lg w-full shadow-2xl text-center relative mx-4 z-50">
+            <div class="w-full h-48 mb-4 overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+                <img id="modalImage" src="" alt="Memory visual" class="w-full h-full object-cover">
+            </div>
+            <span id="modalTitle" class="text-xs tracking-widest text-sky-400 uppercase font-semibold">Constellation Lore</span>
+            <p id="secretText" class="text-base text-slate-200 mt-2 italic font-serif">"Secret goes here..."</p>
+            <button id="closeModalBtn" class="mt-6 px-6 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-medium rounded-full transition-all text-sm cursor-pointer">
+                Return to Skies
+            </button>
+        </div>
+    </div>
+
+    <!-- The Star Map Canvas -->
+    <canvas id="starCanvas"></canvas>
+
+    <!-- External JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>

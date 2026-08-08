@@ -38,14 +38,13 @@ function initOrientation() {
     const btn = document.getElementById('request-permission-btn');
 
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        btn.style.display = 'inline-block';
-        
         btn.addEventListener('click', () => {
             DeviceOrientationEvent.requestPermission()
                 .then(response => {
                     if (response === 'granted') {
                         window.addEventListener('deviceorientation', handleOrientation);
-                        btn.style.display = 'none';
+                        btn.innerText = "˖⁺‧₊˚✦ tilt enabled!";
+                        btn.style.opacity = "0.6";
                     } else {
                         alert('Permission denied to access orientation data.');
                     }
@@ -53,8 +52,10 @@ function initOrientation() {
                 .catch(console.error);
         });
     } else {
-        btn.style.display = 'none';
         window.addEventListener('deviceorientation', handleOrientation);
+        btn.addEventListener('click', () => {
+            btn.innerText = "˖⁺‧₊˚✦ tilt active!";
+        });
     }
 }
 

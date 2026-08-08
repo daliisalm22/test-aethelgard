@@ -1,47 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>. ݁˖ .⋆ ݁｡˚⋆AETHELGARD⋆˚｡⋆. ݁˖ .࣪</title>
-    <link rel="icon" type="image/png" href="star.ico">
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-
-<body class="relative text-white bg-[#030712] w-full h-screen overflow-hidden">
-    <div class="absolute top-6 left-6 z-10 pointer-events-none">
-        <h1 class="text-2xl font-bold tracking-wider text-slate-100">. ݁˖ .⋆ ݁｡˚⋆AETHELGARD⋆˚｡⋆. ݁˖ .</h1>
-        <p class="text-xs text-slate-400">LOOK UP! do u see the stars? u can inspect the memories hidden behind the bigger stars or add ur own ones under "new horizon"</p>
-    </div>
-
-    <div class="absolute bottom-6 left-6 z-10 bg-slate-900/80 border border-slate-700/60 p-4 rounded-xl backdrop-blur-md pointer-events-none text-xs font-mono text-slate-300 space-y-1 shadow-lg">
-        <p class="text-sky-400 font-bold mb-1">🔭 TELESCOPE SENSORS ⋆.°</p>
-        <p>Alpha (Compass): <span id="debugAlpha" class="text-white">0</span>°</p>
-        <p>Beta (Front/Back): <span id="debugBeta" class="text-white">0</span>°</p>
-        <p>Gamma (Left/Right): <span id="debugGamma" class="text-white">0</span>°</p>
-    </div>
-
-    <div class="absolute bottom-6 right-6 z-10">
-        <button id="enableGyroBtn" class="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold rounded-lg shadow-lg text-xs cursor-pointer transition-all">
-            ˖⁺‧₊˚✦ enable phone tilt 📱
-        </button>
-    </div>
-
-    <div id="secretModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md transition-opacity">
-        <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-lg w-full shadow-2xl text-center relative mx-4 z-50">
-            <div class="w-full h-48 mb-4 overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-                <img id="modalImage" src="" alt="Memory visual" class="w-full h-full object-cover">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="style.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>. ݁˖ .⋆ ݁｡˚⋆AETHELGARD⋆˚｡⋆. ݁˖ .࣪</title>
+        <link rel="icon" type="image/png" href="star.ico">
+    </head>
+    <body>
+        <div class="app-text">
+            <div class="app-header">
+                <h1 class="app-title">⋆｡˚⋆AETHELGARD⋆˚｡⋆</h1>
+                <p class="app-subtitle">LOOK UP! do u see the stars? u can inspect the memories hidden behind the bigger stars or add ur own ones under "new horizon"</p>
             </div>
-            <span id="modalTitle" class="text-xs tracking-widest text-sky-400 uppercase font-semibold">Constellation Lore</span>
-            <p id="secretText" class="text-base text-slate-200 mt-2 italic font-serif">"Secret goes here..."</p>
-            <button id="closeModalBtn" class="mt-6 px-6 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-medium rounded-full transition-all text-sm cursor-pointer">
-                Return to Skies
-            </button>
+
+            <div class="gyro-container">
+                <button class="gyro-button">
+                    ˖⁺‧₊˚✦ enable phone tilt
+                </button>
+            </div>
         </div>
-    </div>
 
-    <canvas id="starCanvas"></canvas>
-
-    <script src="script.js"></script>
-</body>
+        <div class="glass-card">
+            <h2>Device Orientation</h2>
+            <p><strong>Alpha (Z):</strong> <span id="alpha">0</span>°</p>
+            <p><strong>Beta (X):</strong> <span id="beta">0</span>°</p>
+            <p><strong>Gamma (Y):</strong> <span id="gamma">0</span>°</p>
+            <button id="request-permission-btn" style="display: none;">Enable Geolocate</button>
+        </div>
+        
+        <script src="script.js"></script>
+    </body>
 </html>

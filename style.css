@@ -3,28 +3,69 @@
 :root{
     --black: #02020a;
     --white: #f1edee;
+    --lilac1: #dad6fa;
+    --lilac2: #b2afd0;
+    --lilac3: #797a96;
+    --lilac4: #5d5777;
+    --lilac5: #2e1a5d;
+    --blue1: #213050;
+    --blue2: #030816;
 }
 
-body, html {
+body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: var(--black);
-    color: var(--white);
+    background-color: var(--blue2);
     font-family: 'Poppins', sans-serif;
+    color: var(--white);
+}
+
+.app-text{
+    width: 50%;
+    margin: auto;
+    text-align: center
+}
+
+.app-title{
+    gap: 10px;
+    text-shadow:  0 0 20px var(--lilac2);
+}
+
+.glass-card{
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.17));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.77);
+    border-radius: 29px;
+    padding: 10px;
+    text-align: center;
+    color: var(--white);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.09);
+    margin: 20px;
 }
 
 canvas {
     display: block;
     cursor: grab;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 0;
 }
 
 canvas:active {
     cursor: grabbing;
+}
+
+.gyro-button{
+    border-radius: 47px;
+    padding-top: 6px;
+    padding-right: 8px;
+    padding-left: 8px;
+    padding-bottom: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.17));
+    color: var(--black);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    font-family: 'Poppins', sans-serif;
+    color: var(--white);
 }

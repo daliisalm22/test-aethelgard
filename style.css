@@ -23,7 +23,6 @@ body {
     color: var(--white);
 }
 
-/* Container locking the canvas behind everything */
 #canvas-container {
     position: fixed;
     top: 0;
@@ -44,7 +43,6 @@ canvas:active {
     cursor: grabbing;
 }
 
-/* UI Layer: sits above the canvas */
 .app-text, .glass-card, .gyro-container {
     position: relative;
     z-index: 1;

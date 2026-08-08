@@ -29,9 +29,9 @@ window.addEventListener('DOMContentLoaded', () => {
         large: new Image()
     };
 
-    starImages.small.src = 'small_star.png';
-    starImages.medium.src = 'medium_star.png';
-    starImages.large.src = 'large_star.png';
+    starImages.small.src = 'img/small_star.png';
+    starImages.medium.src = 'img/medium_star.png';
+    starImages.large.src = 'img/large_star.png';
 
     function getRandomStarImage() {
         const random = Math.random();
@@ -70,59 +70,70 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const decoStars = [];
 
+    const MIN_STAR_DISTANCE = 65;
+    const MAX_GENERATION_ATTEMPTS = 100;
+
     for (let i = 0; i < 500; i++) {
-        const selectedStar = getRandomStarImage();
+        let placed = false;
 
-        let size;
+        for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
+            const selectedStar = getRandomStarImage();
 
-        if (selectedStar.type === 'large') {
-            size = Math.random() * 3 + 20;
-        } else if (selectedStar.type === 'medium') {
-            size = Math.random() * 3.5 + 15;
-        } else {
-            size = Math.random() * 2 + 10;
+            let size;
+
+            if (selectedStar.type === 'large') {
+                size = Math.random() * 3 + 20;
+            } else if (selectedStar.type === 'medium') {
+                size = Math.random() * 3.5 + 15;
+            } else {
+                size = Math.random() * 2 + 10;
+            }
+
+            const x = (Math.random() - 0.5) * worldSize;
+            const y = (Math.random() - 0.5) * worldSize;
+
+            let tooClose = false;
+
+            for (const existingStar of decoStars) {
+                const distance = Math.hypot(
+                    x - existingStar.x,
+                    y - existingStar.y
+                );
+
+                const requiredDistance =
+                    Math.max(
+                        MIN_STAR_DISTANCE,
+                        (size + existingStar.size) * 1.25
+                    );
+
+                if (distance < requiredDistance) {
+                    tooClose = true;
+                    break;
+                }
+            }
+
+            if (tooClose) {
+                continue;
+            }
+
+            decoStars.push({
+                x: x,
+                y: y,
+                size: size,
+                image: selectedStar.image,
+                baseAlpha: Math.random() * 0.35 + 0.1,
+                twinkleSpeed: Math.random() * 0.003 + 0.0005,
+                twinkleOffset: Math.random() * Math.PI * 2
+            });
+
+            placed = true;
+            break;
         }
 
-        decoStars.push({
-            x: (Math.random() - 0.5) * worldSize,
-            y: (Math.random() - 0.5) * worldSize,
-            size: size,
-            image: selectedStar.image,
-            baseAlpha: Math.random() * 0.35 + 0.1,
-            twinkleSpeed: Math.random() * 0.003 + 0.0005,
-            twinkleOffset: Math.random() * Math.PI * 2
-        });
+        if (!placed) {
+            continue;
+        }
     }
-
-    const legendStars = [
-        {
-            x: -200,
-            y: -150,
-            size: 22,
-            image: starImages.large,
-            title: "New Horizons",
-            secret: "Documenting my journey through life, one star at a time.",
-            imageUrl: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=600&auto=format&fit=crop&q=80"
-        },
-        {
-            x: 400,
-            y: 200,
-            size: 22,
-            image: starImages.large,
-            title: "Clean skies",
-            secret: "Cleaning all the memories of my past, hoping to find a new beginning.",
-            imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80"
-        },
-        {
-            x: -500,
-            y: 350,
-            size: 22,
-            image: starImages.large,
-            title: "Unknown paths",
-            secret: "No idea what this button will be used for.",
-            imageUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80"
-        }
-    ];
 
     let memoryStars = JSON.parse(localStorage.getItem('timeCapsuleMemories') || '[]');
 
@@ -142,7 +153,7 @@ function createMemoryModal() {
     modal.className = 'hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md';
 
     modal.innerHTML = `
-        <div class="bg-slate-900/95 border border-slate-700/70 p-7 rounded-2xl max-w-lg w-full shadow-2xl mx-4">
+        <div class="bg-slate-900/95 border border-slate-700/70 p-7 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl mx-4">
             <div class="mb-6">
                 <p class="text-xs tracking-widest text-sky-400 uppercase font-semibold">
                     Time Capsule
@@ -288,17 +299,17 @@ function showMemory(memory) {
         'fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md';
 
     modal.innerHTML = `
-        <div class="bg-slate-900/95 border border-slate-700/70 p-7 rounded-2xl max-w-lg w-full shadow-2xl mx-4">
+        <div class="bg-slate-900/95 border border-slate-700/70 p-7 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl mx-4">
             <p class="text-xs tracking-widest text-sky-400 uppercase font-semibold">
                 Time Capsule Memory
             </p>
 
-            <h2 class="text-2xl font-bold text-white mt-2">
+            <h2 class="text-2xl font-bold text-white mt-2 break-words">
                 ${escapeHtml(memory.title)}
             </h2>
 
-            <div class="mt-5 p-4 rounded-xl bg-slate-950/70 border border-slate-800">
-                <p class="text-base leading-7 text-slate-200 whitespace-pre-wrap">
+            <div class="mt-5 p-4 rounded-xl bg-slate-950/70 border border-slate-800 max-h-72 overflow-y-auto">
+                <p class="text-base leading-7 text-slate-200 whitespace-pre-wrap break-words" style="overflow-wrap:anywhere;">
                     ${escapeHtml(memory.description)}
                 </p>
             </div>
@@ -322,7 +333,7 @@ function showMemory(memory) {
             modal.remove();
         }
     });
-}
+} 
 
 function escapeHtml(text) {
     const div = document.createElement('div');

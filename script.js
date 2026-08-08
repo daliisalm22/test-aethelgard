@@ -35,24 +35,26 @@ function handleOrientation(event) {
 }
 
 function initOrientation() {
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     const btn = document.getElementById('request-permission-btn');
-    btn.style.display = 'inline-block';
-    
-    btn.addEventListener('click', () => {
-        DeviceOrientationEvent.requestPermission()
-        .then(response => {
-            if (response === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientation);
-            btn.style.display = 'none';
-            } else {
-            alert('Permission denied to access orientation data.');
-            }
-        })
-        .catch(console.error);
-    });
+
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        btn.style.display = 'inline-block';
+        
+        btn.addEventListener('click', () => {
+            DeviceOrientationEvent.requestPermission()
+                .then(response => {
+                    if (response === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        btn.style.display = 'none';
+                    } else {
+                        alert('Permission denied to access orientation data.');
+                    }
+                })
+                .catch(console.error);
+        });
     } else {
-    window.addEventListener('deviceorientation', handleOrientation);
+        btn.style.display = 'none';
+        window.addEventListener('deviceorientation', handleOrientation);
     }
 }
 

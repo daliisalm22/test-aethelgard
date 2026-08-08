@@ -141,6 +141,8 @@ const alphaElem = document.getElementById('alpha');
 const betaElem = document.getElementById('beta');
 const gammaElem = document.getElementById('gamma');
 
+let targetDeviceQuat = new THREE.Quaternion();
+let currentDeviceQuat = new THREE.Quaternion();
 let deviceQuat = new THREE.Quaternion();
 let zee = new THREE.Vector3(0, 0, 1);
 let screenTransform = new THREE.Quaternion();
@@ -186,13 +188,16 @@ function handleOrientation(e) {
     adjustQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     deviceQuat.multiply(adjustQuaternion);
 
-    camera.quaternion.copy(deviceQuat);
+    targetDeviceQuat.copy(deviceQuat);
 }
 
 function animate() {
     requestAnimationFrame(animate);
 
     if (!permissionBtn || permissionBtn.style.display !== 'none') {
+        currentDeviceQuat.slerp(targetDeviceQuat, 0.08);
+        camera.quaternion.copy(currentDeviceQuat);
+    } else {
         rotationY += (targetRotationY - rotationY) * 0.05;
         rotationX += (targetRotationX - rotationX) * 0.05;
 

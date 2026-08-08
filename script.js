@@ -107,20 +107,44 @@ if (window.DeviceOrientationEvent) {
     }
 
     // iOS Permission Request Helper Button handler
-    const gyroBtn = document.getElementById('enableGyroBtn');
+const gyroBtn = document.getElementById('enableGyroBtn');
     if (gyroBtn) {
         gyroBtn.addEventListener('click', () => {
+            // Check if iOS 13+ permission request is needed
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(response => {
                         if (response === 'granted') {
                             gyroBtn.style.display = 'none';
+                            window.addEventListener('deviceorientation', handleOrientation);
+                        } else {
+                            alert("Permission denied for motion sensors.");
                         }
-                    }).catch(console.error);
+                    })
+                    .catch(err => console.error(err));
             } else {
+                // Non-iOS devices (Android, etc.) handle this automatically
                 gyroBtn.style.display = 'none';
+                window.addEventListener('deviceorientation', handleOrientation);
             }
         });
+    }
+
+    function handleOrientation(event) {
+        rawAlpha = event.alpha ? Math.round(event.alpha) : 0;
+        rawBeta = event.beta ? Math.round(event.beta) : 0;
+        rawGamma = event.gamma ? Math.round(event.gamma) : 0;
+
+        document.getElementById('debugAlpha').innerText = rawAlpha;
+        document.getElementById('debugBeta').innerText = rawBeta;
+        document.getElementById('debugGamma').innerText = rawGamma;
+
+        motionActive = true;
+        const targetX = (canvas.width / 2) - worldSize/2 + (rawGamma * 15);
+        const targetY = (canvas.height / 2) - worldSize/2 + ((rawBeta - 45) * 15);
+        
+        camera.x += (targetX - camera.x) * 0.1;
+        camera.y += (targetY - camera.y) * 0.1;
     }
 
     // Click detection for legend stars

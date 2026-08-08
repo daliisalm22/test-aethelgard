@@ -148,7 +148,7 @@ let zee = new THREE.Vector3(0, 0, 1);
 let expectedQuaternion = new THREE.Quaternion();
 let adjustQuaternion = new THREE.Quaternion();
 
-let lastAlpha = 0;
+let lastRawAlpha = null;
 let alphaOffset = 0;
 
 if (permissionBtn) {
@@ -170,20 +170,26 @@ if (permissionBtn) {
 }
 
 function handleOrientation(e) {
-    const rawAlpha = e.alpha || 0;
-    const beta = e.beta ? THREE.MathUtils.degToRad(e.beta) : 0;
-    const gamma = e.gamma ? THREE.MathUtils.degToRad(e.gamma) : 0;
+    let rawAlpha = e.alpha;
+    if (rawAlpha === null || rawAlpha === undefined) return;
 
-    let deltaAlpha = rawAlpha - lastAlpha;
-    if (deltaAlpha > 180) {
+    if (lastRawAlpha === null) {
+        lastRawAlpha = rawAlpha;
+    }
+
+    let diff = rawAlpha - lastRawAlpha;
+    if (diff > 180) {
         alphaOffset -= 360;
-    } else if (deltaAlpha < -180) {
+    } else if (diff < -180) {
         alphaOffset += 360;
     }
-    lastAlpha = rawAlpha;
+    lastRawAlpha = rawAlpha;
 
-    const continuousAlpha = rawAlpha + alphaOffset;
+    let continuousAlpha = rawAlpha + alphaOffset;
+
     const alpha = THREE.MathUtils.degToRad(continuousAlpha);
+    const beta = e.beta ? THREE.MathUtils.degToRad(e.beta) : 0;
+    const gamma = e.gamma ? THREE.MathUtils.degToRad(e.gamma) : 0;
 
     if (alphaElem) alphaElem.textContent = continuousAlpha.toFixed(1);
     if (betaElem) betaElem.textContent = e.beta ? e.beta.toFixed(1) : '0';
@@ -208,7 +214,7 @@ function animate() {
     requestAnimationFrame(animate);
 
     if (!permissionBtn || permissionBtn.style.display !== 'none') {
-        currentDeviceQuat.slerp(targetDeviceQuat, 0.05);
+        currentDeviceQuat.slerp(targetDeviceQuat, 0.08);
         camera.quaternion.copy(currentDeviceQuat);
     } else {
         rotationY += (targetRotationY - rotationY) * 0.05;

@@ -43,7 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        if (random < 0.15) {
+        if (random < 0.20) {
             return {
                 image: starImages.medium,
                 type: 'medium'
@@ -54,7 +54,7 @@ window.addEventListener('DOMContentLoaded', () => {
             image: starImages.small,
             type: 'small'
         };
-    }
+}
 
     function getImageForSize(size) {
         if (size >= 2.2) {
@@ -70,17 +70,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const decoStars = [];
 
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 500; i++) {
         const selectedStar = getRandomStarImage();
 
         let size;
 
         if (selectedStar.type === 'large') {
-            size = Math.random() * 2 + 3.5;
+            size = Math.random() * 2.5 + 6;
         } else if (selectedStar.type === 'medium') {
-            size = Math.random() * 0.8 + 1.8;
+            size = Math.random() * 1.5 + 3.5;
         } else {
-            size = Math.random() * 0.8 + 0.7;
+            size = Math.random() * 1 + 1.8;
         }
 
         decoStars.push({

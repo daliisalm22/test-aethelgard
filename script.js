@@ -219,7 +219,7 @@ const gyroBtn = document.getElementById('enableGyroBtn');
             ctx.shadowBlur = 0; 
 
             // Title label
-            ctx.font = '12px Inter, sans-serif';
+            ctx.font = '12px Poppins, sans-serif';
             ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.textAlign = 'center';
             ctx.fillText(star.title, screenX, screenY + (star.size * camera.zoom) + 18);

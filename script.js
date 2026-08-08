@@ -141,47 +141,65 @@ const alphaElem = document.getElementById('alpha');
 const betaElem = document.getElementById('beta');
 const gammaElem = document.getElementById('gamma');
 
+let deviceQuat = new THREE.Quaternion();
+let zee = new THREE.Vector3(0, 0, 1);
+let screenTransform = new THREE.Quaternion();
+let expectedQuaternion = new THREE.Quaternion();
+let adjustQuaternion = new THREE.Quaternion();
+
 if (permissionBtn) {
     permissionBtn.addEventListener('click', () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             DeviceOrientationEvent.requestPermission()
                 .then(response => {
                     if (response === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation);
+                        window.addEventListener('deviceorientation', handleOrientation, true);
                         permissionBtn.style.display = 'none';
                     }
                 })
                 .catch(console.error);
         } else {
-            window.addEventListener('deviceorientation', handleOrientation);
+            window.addEventListener('deviceorientation', handleOrientation, true);
             permissionBtn.style.display = 'none';
         }
     });
 }
 
 function handleOrientation(e) {
-    const alpha = e.alpha || 0;
-    const beta = e.beta || 0;
-    const gamma = e.gamma || 0;
+    const alpha = e.alpha ? THREE.MathUtils.degToRad(e.alpha) : 0;
+    const beta = e.beta ? THREE.MathUtils.degToRad(e.beta) : 0;
+    const gamma = e.gamma ? THREE.MathUtils.degToRad(e.gamma) : 0;
 
-    if (alphaElem) alphaElem.textContent = alpha.toFixed(1);
-    if (betaElem) betaElem.textContent = beta.toFixed(1);
-    if (gammaElem) gammaElem.textContent = gamma.toFixed(1);
+    if (alphaElem) alphaElem.textContent = e.alpha ? e.alpha.toFixed(1) : '0';
+    if (betaElem) betaElem.textContent = e.beta ? e.beta.toFixed(1) : '0';
+    if (gammaElem) gammaElem.textContent = e.gamma ? e.gamma.toFixed(1) : '0';
 
-    targetRotationY = THREE.MathUtils.degToRad(alpha);
-    targetRotationX = THREE.MathUtils.degToRad(beta - 90);
-    targetRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, targetRotationX));
+    const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
+    const cEuler = new THREE.Euler();
+    cEuler.set(beta, alpha, -gamma, 'YXZ');
+    deviceQuat.setFromEuler(cEuler);
+
+    expectedQuaternion.setFromAxisAngle(zee, -orient);
+    deviceQuat.multiply(expectedQuaternion);
+
+    adjustQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    deviceQuat.multiply(adjustQuaternion);
+
+    camera.quaternion.copy(deviceQuat);
 }
 
 function animate() {
     requestAnimationFrame(animate);
 
-    rotationY += (targetRotationY - rotationY) * 0.05;
-    rotationX += (targetRotationX - rotationX) * 0.05;
+    if (!permissionBtn || permissionBtn.style.display !== 'none') {
+        rotationY += (targetRotationY - rotationY) * 0.05;
+        rotationX += (targetRotationX - rotationX) * 0.05;
 
-    camera.rotation.order = 'YXZ';
-    camera.rotation.y = rotationY;
-    camera.rotation.x = rotationX;
+        camera.rotation.order = 'YXZ';
+        camera.rotation.y = rotationY;
+        camera.rotation.x = rotationX;
+    }
 
     starField.rotation.y += 0.0005;
 

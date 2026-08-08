@@ -145,9 +145,11 @@ let targetDeviceQuat = new THREE.Quaternion();
 let currentDeviceQuat = new THREE.Quaternion();
 let deviceQuat = new THREE.Quaternion();
 let zee = new THREE.Vector3(0, 0, 1);
-let screenTransform = new THREE.Quaternion();
 let expectedQuaternion = new THREE.Quaternion();
 let adjustQuaternion = new THREE.Quaternion();
+
+let lastAlpha = 0;
+let alphaOffset = 0;
 
 if (permissionBtn) {
     permissionBtn.addEventListener('click', () => {
@@ -168,11 +170,22 @@ if (permissionBtn) {
 }
 
 function handleOrientation(e) {
-    const alpha = e.alpha ? THREE.MathUtils.degToRad(e.alpha) : 0;
+    const rawAlpha = e.alpha || 0;
     const beta = e.beta ? THREE.MathUtils.degToRad(e.beta) : 0;
     const gamma = e.gamma ? THREE.MathUtils.degToRad(e.gamma) : 0;
 
-    if (alphaElem) alphaElem.textContent = e.alpha ? e.alpha.toFixed(1) : '0';
+    let deltaAlpha = rawAlpha - lastAlpha;
+    if (deltaAlpha > 180) {
+        alphaOffset -= 360;
+    } else if (deltaAlpha < -180) {
+        alphaOffset += 360;
+    }
+    lastAlpha = rawAlpha;
+
+    const continuousAlpha = rawAlpha + alphaOffset;
+    const alpha = THREE.MathUtils.degToRad(continuousAlpha);
+
+    if (alphaElem) alphaElem.textContent = continuousAlpha.toFixed(1);
     if (betaElem) betaElem.textContent = e.beta ? e.beta.toFixed(1) : '0';
     if (gammaElem) gammaElem.textContent = e.gamma ? e.gamma.toFixed(1) : '0';
 
@@ -195,7 +208,7 @@ function animate() {
     requestAnimationFrame(animate);
 
     if (!permissionBtn || permissionBtn.style.display !== 'none') {
-        currentDeviceQuat.slerp(targetDeviceQuat, 0.08);
+        currentDeviceQuat.slerp(targetDeviceQuat, 0.05);
         camera.quaternion.copy(currentDeviceQuat);
     } else {
         rotationY += (targetRotationY - rotationY) * 0.05;

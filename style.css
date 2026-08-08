@@ -35,10 +35,10 @@ body {
 }
 
 .glass-card{
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.17));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.17));
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.77);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 29px;
     padding: 10px;
     text-align: center;
@@ -62,10 +62,18 @@ canvas:active {
     padding-right: 8px;
     padding-left: 8px;
     padding-bottom: 2px;
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.17));
     color: var(--black);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
     font-family: 'Poppins', sans-serif;
     color: var(--white);
+}
+
+.star{
+    position: absolute;
+    background-color: var(--lilac1);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
 }

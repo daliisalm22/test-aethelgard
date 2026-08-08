@@ -80,28 +80,30 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- GYROSCOPE / DEVICE ORIENTATION CONTROLS (Mobile 3D Tilt) ---
-    if (window.DeviceOrientationEvent) {
+if (window.DeviceOrientationEvent) {
         window.addEventListener('deviceorientation', (event) => {
+            // Let's check if the event is actually firing data
+            console.log("Event fired!", event.alpha, event.beta, event.gamma);
+
             rawAlpha = event.alpha ? Math.round(event.alpha) : 0;
             rawBeta = event.beta ? Math.round(event.beta) : 0;
             rawGamma = event.gamma ? Math.round(event.gamma) : 0;
 
-            // Update debug text on screen
             document.getElementById('debugAlpha').innerText = rawAlpha;
             document.getElementById('debugBeta').innerText = rawBeta;
             document.getElementById('debugGamma').innerText = rawGamma;
 
-            if (event.beta !== null && event.gamma !== null) {
+            if (event.beta !== null || event.gamma !== null) {
                 motionActive = true;
-                // Map gamma (left/right tilt: -90 to 90) and beta (front/back tilt: -180 to 180) to camera position
                 const targetX = (canvas.width / 2) - worldSize/2 + (rawGamma * 15);
                 const targetY = (canvas.height / 2) - worldSize/2 + ((rawBeta - 45) * 15);
                 
-                // Smooth interpolation (LERP) for fluid 3D movement
                 camera.x += (targetX - camera.x) * 0.1;
                 camera.y += (targetY - camera.y) * 0.1;
             }
         });
+    } else {
+        alert("Device Orientation is not supported on this browser.");
     }
 
     // iOS Permission Request Helper Button handler

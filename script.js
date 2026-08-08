@@ -16,6 +16,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const worldSize = 3000;
 
+    // Debug values for screen display
+    let rawAlpha = 0, rawBeta = 0, rawGamma = 0;
+    let motionActive = false;
+
     // 1. Tiny Decoration Stars (Background atmosphere)
     const decoStars = [];
     for (let i = 0; i < 300; i++) {
@@ -29,12 +33,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Large Interactive "Legend" Stars (With Secrets & Images)
+    // 2. Large Interactive "Legend" Stars
     const legendStars = [
         {
             x: -200, y: -150,
             size: 6,
-            color: '#38bdf8', // Cyan glow
+            color: '#38bdf8',
             title: "The First Horizon",
             secret: "I left my hometown just to prove I could do it, but I miss my mom's cooking every single day.",
             image: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=600&auto=format&fit=crop&q=80"
@@ -42,7 +46,7 @@ window.addEventListener('DOMContentLoaded', () => {
         {
             x: 400, y: 200,
             size: 7,
-            color: '#fbbf24', // Gold glow
+            color: '#fbbf24',
             title: "Grandfather's Echo",
             secret: "I still keep a voicemail from my grandfather saved just to hear his laugh on hard days.",
             image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80"
@@ -50,22 +54,23 @@ window.addEventListener('DOMContentLoaded', () => {
         {
             x: -500, y: 350,
             size: 5,
-            color: '#f472b6', // Pink glow
+            color: '#f472b6',
             title: "Midnight Manuscript",
             secret: "I wrote a whole novel in secret and I'm still too scared to show a single soul.",
             image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80"
         }
     ];
 
-    // Mouse Drag Handlers for Panning
+    // --- MOUSE CONTROLS (Desktop Fallback) ---
     window.addEventListener('mousedown', (e) => {
+        if (motionActive) return; // Disable mouse drag if phone tilt is active
         isDragging = true;
         startX = e.clientX - camera.x;
         startY = e.clientY - camera.y;
     });
 
     window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
+        if (!isDragging || motionActive) return;
         camera.x = e.clientX - startX;
         camera.y = e.clientY - startY;
     });
@@ -74,9 +79,51 @@ window.addEventListener('DOMContentLoaded', () => {
         isDragging = false;
     });
 
-    // Click detection ONLY on the larger Legend Stars
+    // --- GYROSCOPE / DEVICE ORIENTATION CONTROLS (Mobile 3D Tilt) ---
+    if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', (event) => {
+            rawAlpha = event.alpha ? Math.round(event.alpha) : 0;
+            rawBeta = event.beta ? Math.round(event.beta) : 0;
+            rawGamma = event.gamma ? Math.round(event.gamma) : 0;
+
+            // Update debug text on screen
+            document.getElementById('debugAlpha').innerText = rawAlpha;
+            document.getElementById('debugBeta').innerText = rawBeta;
+            document.getElementById('debugGamma').innerText = rawGamma;
+
+            if (event.beta !== null && event.gamma !== null) {
+                motionActive = true;
+                // Map gamma (left/right tilt: -90 to 90) and beta (front/back tilt: -180 to 180) to camera position
+                const targetX = (canvas.width / 2) - worldSize/2 + (rawGamma * 15);
+                const targetY = (canvas.height / 2) - worldSize/2 + ((rawBeta - 45) * 15);
+                
+                // Smooth interpolation (LERP) for fluid 3D movement
+                camera.x += (targetX - camera.x) * 0.1;
+                camera.y += (targetY - camera.y) * 0.1;
+            }
+        });
+    }
+
+    // iOS Permission Request Helper Button handler
+    const gyroBtn = document.getElementById('enableGyroBtn');
+    if (gyroBtn) {
+        gyroBtn.addEventListener('click', () => {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        if (response === 'granted') {
+                            gyroBtn.style.display = 'none';
+                        }
+                    }).catch(console.error);
+            } else {
+                gyroBtn.style.display = 'none';
+            }
+        });
+    }
+
+    // Click detection for legend stars
     window.addEventListener('click', (e) => {
-        if (e.target.closest('#secretModal')) return;
+        if (e.target.closest('#secretModal') || e.target.closest('#enableGyroBtn')) return;
 
         const mouseX = e.clientX;
         const mouseY = e.clientY;
@@ -87,8 +134,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const distance = Math.hypot(mouseX - screenX, mouseY - screenY);
             
-            // Generous hit-box radius for easy clicking
-            if (distance < (star.size * camera.zoom) + 15) {
+            if (distance < (star.size * camera.zoom) + 20) {
                 showSecretModal(star);
             }
         });
@@ -122,7 +168,7 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         });
 
-        // Draw Legend Stars (Bigger, glowing, distinct)
+        // Draw Legend Stars
         legendStars.forEach(star => {
             const screenX = (star.x + worldSize / 2) * camera.zoom + camera.x;
             const screenY = (star.y + worldSize / 2) * camera.zoom + camera.y;
@@ -131,7 +177,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Outer Glow ring
             ctx.beginPath();
-            ctx.arc(screenX, screenY, (star.size + 6) * camera.zoom, 0, Math.PI * 2);
+            ctx.arc(screenX, screenY, (star.size + 8) * camera.zoom, 0, Math.PI * 2);
             ctx.fillStyle = star.color;
             ctx.globalAlpha = 0.3;
             ctx.fill();
@@ -146,9 +192,9 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
             ctx.shadowBlur = 0; 
 
-            // Optional title label floating underneath
+            // Title label
             ctx.font = '12px Inter, sans-serif';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.textAlign = 'center';
             ctx.fillText(star.title, screenX, screenY + (star.size * camera.zoom) + 18);
         });

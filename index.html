@@ -37,6 +37,21 @@
         <p class="text-xs text-slate-400">Pan across the night sky. Click glowing legend stars to inspect memories.</p>
     </div>
 
+    <!-- Live Gyroscope Debug Readout Panel -->
+    <div class="absolute bottom-6 left-6 z-10 bg-slate-900/80 border border-slate-700/60 p-4 rounded-xl backdrop-blur-md pointer-events-none text-xs font-mono text-slate-300 space-y-1 shadow-lg">
+        <p class="text-sky-400 font-bold mb-1">🔭 TELESCOPE SENSORS</p>
+        <p>Alpha (Compass): <span id="debugAlpha" class="text-white">0</span>°</p>
+        <p>Beta (Front/Back): <span id="debugBeta" class="text-white">0</span>°</p>
+        <p>Gamma (Left/Right): <span id="debugGamma" class="text-white">0</span>°</p>
+    </div>
+
+    <!-- iOS Permission Button (Shows up on iPhones) -->
+    <div class="absolute bottom-6 right-6 z-10">
+        <button id="enableGyroBtn" class="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold rounded-lg shadow-lg text-xs cursor-pointer transition-all">
+            Enable Phone Tilt 📱
+        </button>
+    </div>
+
     <!-- Hidden Star Secret Modal -->
     <div id="secretModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md transition-opacity">
         <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-lg w-full shadow-2xl text-center relative mx-4 z-50">

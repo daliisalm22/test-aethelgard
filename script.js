@@ -131,13 +131,13 @@ const betaElem = document.getElementById('beta') || document.getElementById('deb
 const gammaElem = document.getElementById('gamma') || document.getElementById('debugGamma');
 
 function handleOrientation(event) {
-    rawAlpha = event.alpha !== null ? Math.round(event.alpha) : 0;
-    rawBeta = event.beta !== null ? Math.round(event.beta) : 0;
-    rawGamma = event.gamma !== null ? Math.round(event.gamma) : 0;
+    rawAlpha = event.alpha !== null ? event.alpha : 0;
+    rawBeta = event.beta !== null ? event.beta : 0;
+    rawGamma = event.gamma !== null ? event.gamma : 0;
 
-    if (alphaElem) alphaElem.innerText = rawAlpha;
-    if (betaElem) betaElem.innerText = rawBeta;
-    if (gammaElem) gammaElem.innerText = rawGamma;
+    if (alphaElem) alphaElem.innerText = Math.round(rawAlpha);
+    if (betaElem) betaElem.innerText = Math.round(rawBeta);
+    if (gammaElem) gammaElem.innerText = Math.round(rawGamma);
 
     if (event.beta !== null || event.gamma !== null) {
         motionActive = true;
@@ -176,16 +176,22 @@ function animate() {
     requestAnimationFrame(animate);
 
     if (motionActive) {
-        const beta = THREE.MathUtils.degToRad(rawBeta);
-        const gamma = THREE.MathUtils.degToRad(rawGamma);
+        // Umwandlung in Radiant mit sauberer Achsenzuordnung für echtes Umschauen im Kugelinneren
+        const alphaRad = THREE.MathUtils.degToRad(rawAlpha);
+        const betaRad = THREE.MathUtils.degToRad(rawBeta - 90); // Korrigiert den Nullpunkt auf die Augenhöhe
+        const gammaRad = THREE.MathUtils.degToRad(rawGamma);
 
-        // Using Beta for pitch (up/down) and Gamma for panning/sliding left-right around the world center
-        const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), beta - Math.PI / 2);
-        const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -gamma);
-        
-        const q = new THREE.Quaternion().multiplyQuaternions(qYaw, qPitch);
+        // Wir nutzen Yaw (Drehung um Y-Achse via Alpha/Gamma) und Pitch (Neigung via Beta) 
+        // exakt so, dass es sich wie das Verschieben des Blickfelds anfühlt.
+        const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -alphaRad);
+        const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -betaRad);
+        const qRoll = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), gammaRad);
 
-        currentCameraQuaternion.slerp(q, 0.15);
+        const targetQuaternion = new THREE.Quaternion();
+        targetQuaternion.multiplyQuaternions(qYaw, qPitch);
+        targetQuaternion.multiply(qRoll);
+
+        currentCameraQuaternion.slerp(targetQuaternion, 0.15);
         camera.quaternion.copy(currentCameraQuaternion);
     } else {
         const manualQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));

@@ -17,30 +17,49 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Sterne generieren
-const numStars = 1500;
+const textureLoader = new THREE.TextureLoader();
+const textureSmall = textureLoader.load('img/small_star.png');
+const textureMedium = textureLoader.load('img/medium_star.png');
+const textureLarge = textureLoader.load('img/large_star.png');
+
 const bubbleRadius = 1500;
-const starGeometry = new THREE.BufferGeometry();
-const starPositions = new Float32Array(numStars * 3);
 
-for (let i = 0; i < numStars; i++) {
-    const u = Math.random();
-    const v = Math.random();
-    const theta = u * 2.0 * Math.PI;
-    const phi = Math.acos(2.0 * v - 1.0);
-    const r = bubbleRadius * Math.cbrt(Math.random());
+function createStarFieldTexture(count, size, texture) {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
 
-    starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    starPositions[i * 3 + 2] = r * Math.cos(phi);
+    for (let i = 0; i < count; i++) {
+        const u = Math.random();
+        const v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+        const r = bubbleRadius * Math.cbrt(Math.random());
+
+        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = r * Math.cos(phi);
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+    const material = new THREE.PointsMaterial({
+        map: texture,
+        size: size,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true
+    });
+
+    return new THREE.Points(geometry, material);
 }
 
-starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-const starMaterial = new THREE.PointsMaterial({ color: 0xf1edee, size: 6, sizeAttenuation: true });
-const starField = new THREE.Points(starGeometry, starMaterial);
-scene.add(starField);
+const smallBgStars = createStarFieldTexture(1000, 12, textureSmall);
+const mediumBgStars = createStarFieldTexture(500, 24, textureMedium);
 
-// Erinnerungs-Sterne generieren
+scene.add(smallBgStars);
+scene.add(mediumBgStars);
+
 const memoryStars = [];
 const numMemories = 40;
 const sampleMemories = [
@@ -49,34 +68,39 @@ const sampleMemories = [
     "Looking for constellations that didn't exist."
 ];
 
-const memoryGeo = new THREE.SphereGeometry(10, 16, 16);
-const lilacShades = [0xdad6fa, 0xb2afd0, 0x797a96, 0x5d5777, 0x9b8fc9, 0xc4bffa];
+const memoryMaterials = [
+    new THREE.SpriteMaterial({ map: textureMedium, transparent: true, blending: THREE.AdditiveBlending }),
+    new THREE.SpriteMaterial({ map: textureLarge, transparent: true, blending: THREE.AdditiveBlending })
+];
 
 for (let i = 0; i < numMemories; i++) {
     const u = Math.random();
     const v = Math.random();
     const theta = u * 2.0 * Math.PI;
     const phi = Math.acos(2.0 * v - 1.0);
-    const r = (bubbleRadius * 0.8) * Math.cbrt(Math.random());
+    const r = (bubbleRadius * 0.7) * Math.cbrt(Math.random());
 
-    const randomLilac = lilacShades[Math.floor(Math.random() * lilacShades.length)];
-    const material = new THREE.MeshBasicMaterial({ color: randomLilac });
-    const memoryStar = new THREE.Mesh(memoryGeo, material);
-    memoryStar.position.set(
+    const isLarge = Math.random() > 0.5;
+    const matIndex = isLarge ? 1 : 0;
+    const sprite = new THREE.Sprite(memoryMaterials[matIndex]);
+
+    const baseScale = isLarge ? 60 : 35;
+    sprite.scale.set(baseScale, baseScale, 1);
+
+    sprite.position.set(
         r * Math.sin(phi) * Math.cos(theta),
         r * Math.sin(phi) * Math.sin(theta),
         r * Math.cos(phi)
     );
     
-    memoryStar.userData = {
+    sprite.userData = {
         message: sampleMemories[Math.floor(Math.random() * sampleMemories.length)]
     };
 
-    scene.add(memoryStar);
-    memoryStars.push(memoryStar);
+    scene.add(sprite);
+    memoryStars.push(sprite);
 }
 
-// Steuerung variablen
 let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
 
@@ -88,7 +112,6 @@ let rawBeta = 0;
 let rawGamma = 0;
 let motionActive = false;
 
-// Maus- / Touch-Fallback
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
     if (motionActive) return;
@@ -129,7 +152,6 @@ window.addEventListener('touchmove', (e) => {
 
 window.addEventListener('touchend', () => { isMouseDown = false; });
 
-// Gyroskop Event Listener
 const permissionBtn = document.getElementById('enableGyroBtn') || document.getElementById('request-permission-btn');
 const alphaElem = document.getElementById('alpha') || document.getElementById('debugAlpha');
 const betaElem = document.getElementById('beta') || document.getElementById('debugBeta');
@@ -200,7 +222,9 @@ function animate() {
         camera.quaternion.copy(currentCameraQuaternion);
     }
 
-    starField.rotation.y += 0.0005;
+    smallBgStars.rotation.y += 0.0003;
+    mediumBgStars.rotation.y += 0.0005;
+
     renderer.render(scene, camera);
 }
 

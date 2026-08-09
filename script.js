@@ -81,11 +81,8 @@ let manualYaw = 0;
 let manualPitch = 0;
 
 let isTiltActive = false;
-let deviceQuaternion = new THREE.Quaternion();
-let manualQuaternion = new THREE.Quaternion();
-
-let baseOrientationQuaternion = null;
-let hasBaseOrientation = false;
+let deviceOrientation = { alpha: 0, beta: 0, gamma: 0 };
+let hasDeviceOrientation = false;
 
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
@@ -157,26 +154,10 @@ function handleOrientation(e) {
     if (betaElem) betaElem.textContent = e.beta.toFixed(1);
     if (gammaElem) gammaElem.textContent = e.gamma.toFixed(1);
 
-    const alpha = THREE.MathUtils.degToRad(e.alpha);
-    const beta = THREE.MathUtils.degToRad(e.beta);
-    const gamma = THREE.MathUtils.degToRad(e.gamma);
-
-    const zee = new THREE.Vector3(0, 0, 1);
-    const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
-
-    const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-    const q = new THREE.Quaternion().setFromEuler(euler);
-    const qOrient = new THREE.Quaternion().setFromAxisAngle(zee, -orient);
-    q.multiply(qOrient);
-    const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-    q.premultiply(qAdjust);
-
-    if (!hasBaseOrientation) {
-        baseOrientationQuaternion = q.clone().invert();
-        hasBaseOrientation = true;
-    }
-
-    deviceQuaternion.copy(baseOrientationQuaternion).multiply(q);
+    deviceOrientation.alpha = THREE.MathUtils.degToRad(e.alpha);
+    deviceOrientation.beta = THREE.MathUtils.degToRad(e.beta);
+    deviceOrientation.gamma = THREE.MathUtils.degToRad(e.gamma);
+    hasDeviceOrientation = true;
 }
 
 let currentCameraQuaternion = new THREE.Quaternion();
@@ -184,24 +165,27 @@ let currentCameraQuaternion = new THREE.Quaternion();
 function animate() {
     requestAnimationFrame(animate);
 
-    manualQuaternion.setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
-
     let targetQuaternion = new THREE.Quaternion();
-    if (isTiltActive && hasBaseOrientation) {
-        let worldUp = new THREE.Vector3(0, 1, 0);
-        let lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(deviceQuaternion);
-        let flatLookDir = new THREE.Vector3(lookDir.x, 0, lookDir.z).normalize();
-        
-        let yawCorrection = new THREE.Quaternion();
-        if (flatLookDir.lengthSq() > 0.001) {
-            let defaultForward = new THREE.Vector3(0, 0, -1);
-            yawCorrection.setFromUnitVectors(flatLookDir, defaultForward);
-        }
 
-        let correctedDeviceQ = yawCorrection.clone().multiply(deviceQuaternion);
-        targetQuaternion.copy(correctedDeviceQ).multiply(manualQuaternion);
+    if (isTiltActive && hasDeviceOrientation) {
+        const alpha = deviceOrientation.alpha;
+        const beta = deviceOrientation.beta;
+        const gamma = deviceOrientation.gamma;
+
+        const zee = new THREE.Vector3(0, 0, 1);
+        const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
+        const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+        const qDevice = new THREE.Quaternion().setFromEuler(euler);
+        const qOrient = new THREE.Quaternion().setFromAxisAngle(zee, -orient);
+        qDevice.multiply(qOrient);
+        const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+        qDevice.premultiply(qAdjust);
+
+        const qManual = new THREE.Quaternion().setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
+        targetQuaternion.copy(qDevice).multiply(qManual);
     } else {
-        targetQuaternion.copy(manualQuaternion);
+        targetQuaternion.setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
     }
 
     currentCameraQuaternion.slerp(targetQuaternion, 0.15);

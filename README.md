@@ -12,7 +12,19 @@ based on that prompt we developed an app that requires u to look up (or around i
 ₊˚ ✧ ━━━━ ꒰ঌ ⊱ ·✦· ⊰ ໒꒱ ━━━━ ✧ ₊˚
 
 ## how the app works  𑣲⋆｡˚ ⟡˖ ࣪
-when u first open the app u imm
+when u first open the app u immediately encounter the main screen... here u see the stars where ur ideas etc can be stored u can filter them by categories... below is a button add a new star so idea etc and one to activate the phone tilt option because some browsers/device may require u confirming that u allow it first... when u create a new star u can edit its category and its glow color, which u can also add in general with the last of the buttons at the bottom right :3
+on the bottom left u can view ur coordinates (only on phone version tho) and edit stuff like the music and sound volume or whether they are allowed to be played at all
+
+ohh and to view the stars u have to press on the bigger ones (they actually contain smth) and hold for 3 seconds (ull see a countdown) and then u can see the content and delete the star if u feel the need to do so
+
+₊˚ ✧ ━━━━ ꒰ঌ ⊱ ·✦· ⊰ ໒꒱ ━━━━ ✧ ₊˚
+
+## screenshots: 
+
+![screenshot1](img/main.png "screenshot")
+![screenshot1](img/press.png "screenshot")
+![screenshot1](img/star.png "screenshot")
+![screenshot1](img/new.png "screenshot")
 
 ₊˚ ✧ ━━━━ ꒰ঌ ⊱ ·✦· ⊰ ໒꒱ ━━━━ ✧ ₊˚
 
@@ -26,6 +38,7 @@ when u first open the app u imm
 
 ## features were the most proud of lol
 * the 3d/gyroscopic environment of the sky
+* how cool it feels to use the app with a phone
 * how customizable it is
 * the overall look of the app hehe esp the bg ofc and the glassy look
 
@@ -33,7 +46,8 @@ when u first open the app u imm
 
 ## problems that occured while coding ⋆｡˚𑣲⋆｡˚
 * really making the environtment gyroscopic and like feel like ur looking at a sky instead of it randomly rotating the view for instance lol
-* 
+* choosing a style we truly liked
+* making the stars twinkle
 
 ₊˚ ✧ ━━━━ ꒰ঌ ⊱ ·✦· ⊰ ໒꒱ ━━━━ ✧ ₊˚
 
@@ -58,12 +72,6 @@ we used ai mainly for planning, debugging but also to improve/refine our code in
 
 ## ₊˚⊹ ࿔ how to visit
 u can now check out the live online version here: **https://daliisalm22.github.io/aethelgard/**
-
-₊˚ ✧ ━━━━ ꒰ঌ ⊱ ·✦· ⊰ ໒꒱ ━━━━ ✧ ₊˚
-
-## ೄྀ app demo video ^^
-
-
 
 ₊˚ ✧ ━━━━ ꒰ঌ ⊱ ·✦· ⊰ ໒꒱ ━━━━ ✧ ₊˚
 

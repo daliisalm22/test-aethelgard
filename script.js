@@ -48,6 +48,8 @@ const sampleMemories = [
 ];
 
 const memoryGeo = new THREE.SphereGeometry(10, 16, 16);
+const lilacShades = [0xdad6fa, 0xb2afd0, 0x797a96, 0x5d5777, 0x9b8fc9, 0xc4bffa];
+
 for (let i = 0; i < numMemories; i++) {
     const u = Math.random();
     const v = Math.random();
@@ -55,7 +57,8 @@ for (let i = 0; i < numMemories; i++) {
     const phi = Math.acos(2.0 * v - 1.0);
     const r = (bubbleRadius * 0.8) * Math.cbrt(Math.random());
 
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+    const randomLilac = lilacShades[Math.floor(Math.random() * lilacShades.length)];
+    const material = new THREE.MeshBasicMaterial({ color: randomLilac });
     const memoryStar = new THREE.Mesh(memoryGeo, material);
     memoryStar.position.set(
         r * Math.sin(phi) * Math.cos(theta),
@@ -76,28 +79,46 @@ let mouseX = 0, mouseY = 0;
 let targetRotationX = 0, targetRotationY = 0;
 let rotationX = 0, rotationY = 0;
 
-window.addEventListener('mousedown', (e) => { isMouseDown = true; mouseX = e.clientX; mouseY = e.clientY; });
+let isTiltActive = false;
+
+window.addEventListener('mousedown', (e) => { 
+    if (e.target.closest('.interactive')) return;
+    isMouseDown = true; 
+    mouseX = e.clientX; 
+    mouseY = e.clientY; 
+});
+
 window.addEventListener('mousemove', (e) => {
     if (!isMouseDown) return;
     targetRotationY += (e.clientX - mouseX) * 0.003;
     targetRotationX += (e.clientY - mouseY) * 0.003;
     targetRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, targetRotationX));
-    mouseX = e.clientX; mouseY = e.clientY;
+    mouseX = e.clientX; 
+    mouseY = e.clientY;
 });
+
 window.addEventListener('mouseup', () => { isMouseDown = false; });
 
 window.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 1) { isMouseDown = true; mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; }
+    if (isTiltActive) return;
+    if (e.target.closest('.interactive')) return;
+    if (e.touches.length === 1) { 
+        isMouseDown = true; 
+        mouseX = e.touches[0].clientX; 
+        mouseY = e.touches[0].clientY; 
+    }
 });
+
 window.addEventListener('touchmove', (e) => {
-    if (!isMouseDown || e.touches.length !== 1) return;
+    if (isTiltActive || !isMouseDown || e.touches.length !== 1) return;
     targetRotationY += (e.touches[0].clientX - mouseX) * 0.003;
     targetRotationX += (e.touches[0].clientY - mouseY) * 0.003;
     targetRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, targetRotationX));
-    mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY;
+    mouseX = e.touches[0].clientX; 
+    mouseY = e.touches[0].clientY;
 });
-window.addEventListener('touchend', () => { isMouseDown = false; });
 
+window.addEventListener('touchend', () => { isMouseDown = false; });
 
 const permissionBtn = document.getElementById('request-permission-btn');
 const alphaElem = document.getElementById('alpha');
@@ -106,8 +127,8 @@ const gammaElem = document.getElementById('gamma');
 
 let targetDeviceQuat = new THREE.Quaternion();
 let currentDeviceQuat = new THREE.Quaternion();
-let lastAlpha = null;
-let accumulatedAlpha = 0;
+let baseOrientationQuaternion = null;
+let hasBaseOrientation = false;
 
 if (permissionBtn) {
     permissionBtn.addEventListener('click', () => {
@@ -116,12 +137,14 @@ if (permissionBtn) {
                 .then(response => {
                     if (response === 'granted') {
                         window.addEventListener('deviceorientation', handleOrientation, true);
+                        isTiltActive = true;
                         permissionBtn.style.display = 'none';
                     }
                 })
                 .catch(console.error);
         } else {
             window.addEventListener('deviceorientation', handleOrientation, true);
+            isTiltActive = true;
             permissionBtn.style.display = 'none';
         }
     });
@@ -130,24 +153,13 @@ if (permissionBtn) {
 function handleOrientation(e) {
     if (e.alpha === null || e.beta === null || e.gamma === null) return;
 
-    if (lastAlpha === null) {
-        lastAlpha = e.alpha;
-        accumulatedAlpha = e.alpha;
-    }
-
-    let deltaAlpha = e.alpha - lastAlpha;
-    if (deltaAlpha > 180) deltaAlpha -= 360;
-    if (deltaAlpha < -180) deltaAlpha += 360;
-    accumulatedAlpha += deltaAlpha;
-    lastAlpha = e.alpha;
-
-    const alpha = THREE.MathUtils.degToRad(accumulatedAlpha);
-    const beta = THREE.MathUtils.degToRad(e.beta);
-    const gamma = THREE.MathUtils.degToRad(e.gamma);
-
-    if (alphaElem) alphaElem.textContent = accumulatedAlpha.toFixed(1);
+    if (alphaElem) alphaElem.textContent = e.alpha.toFixed(1);
     if (betaElem) betaElem.textContent = e.beta.toFixed(1);
     if (gammaElem) gammaElem.textContent = e.gamma.toFixed(1);
+
+    const alpha = THREE.MathUtils.degToRad(e.alpha);
+    const beta = THREE.MathUtils.degToRad(e.beta);
+    const gamma = THREE.MathUtils.degToRad(e.gamma);
 
     const zee = new THREE.Vector3(0, 0, 1);
     const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
@@ -159,13 +171,18 @@ function handleOrientation(e) {
     const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     q.premultiply(qAdjust);
 
-    targetDeviceQuat.copy(q);
+    if (!hasBaseOrientation) {
+        baseOrientationQuaternion = q.clone().invert();
+        hasBaseOrientation = true;
+    }
+
+    targetDeviceQuat.copy(baseOrientationQuaternion).multiply(q);
 }
 
 function animate() {
     requestAnimationFrame(animate);
 
-    if (!permissionBtn || permissionBtn.style.display !== 'none') {
+    if (isTiltActive && hasBaseOrientation) {
         currentDeviceQuat.slerp(targetDeviceQuat, 0.15);
         camera.quaternion.copy(currentDeviceQuat);
     } else {

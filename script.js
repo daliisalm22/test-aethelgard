@@ -17,7 +17,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// 1. Hintergrund-Sternenfeld (hier waren die Sterne verschwunden!)
+// 1. Hintergrund-Sternenfeld
 const numStars = 2000;
 const bubbleRadius = 1500;
 const starGeometry = new THREE.BufferGeometry();
@@ -208,6 +208,7 @@ let targetDeviceQuat = new THREE.Quaternion();
 let currentDeviceQuat = new THREE.Quaternion();
 let lastAlpha = null;
 let accumulatedAlpha = 0;
+let isGyroActive = false; // Status für Gyroskop
 
 if (permissionBtn) {
     permissionBtn.addEventListener('click', () => {
@@ -216,12 +217,14 @@ if (permissionBtn) {
                 .then(response => {
                     if (response === 'granted') {
                         window.addEventListener('deviceorientation', handleOrientation, true);
+                        isGyroActive = true;
                         permissionBtn.style.display = 'none';
                     }
                 })
                 .catch(console.error);
         } else {
             window.addEventListener('deviceorientation', handleOrientation, true);
+            isGyroActive = true;
             permissionBtn.style.display = 'none';
         }
     });
@@ -266,7 +269,8 @@ function handleOrientation(e) {
 function animate() {
     requestAnimationFrame(animate);
 
-    if (!permissionBtn || permissionBtn.style.display !== 'none') {
+    // HIER KORRIGIERT: Nutzt die saubere isGyroActive Variable
+    if (isGyroActive) {
         currentDeviceQuat.slerp(targetDeviceQuat, 0.15);
         camera.quaternion.copy(currentDeviceQuat);
     } else {

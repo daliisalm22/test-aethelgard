@@ -141,11 +141,15 @@ const alphaElem = document.getElementById('alpha');
 const betaElem = document.getElementById('beta');
 const gammaElem = document.getElementById('gamma');
 
+let targetDeviceQuat = new THREE.Quaternion();
+let currentDeviceQuat = new THREE.Quaternion();
 let deviceQuat = new THREE.Quaternion();
 let zee = new THREE.Vector3(0, 0, 1);
-let screenTransform = new THREE.Quaternion();
 let expectedQuaternion = new THREE.Quaternion();
 let adjustQuaternion = new THREE.Quaternion();
+
+let lastRawAlpha = null;
+let alphaOffset = 0;
 
 if (permissionBtn) {
     permissionBtn.addEventListener('click', () => {
@@ -166,11 +170,28 @@ if (permissionBtn) {
 }
 
 function handleOrientation(e) {
-    const alpha = e.alpha ? THREE.MathUtils.degToRad(e.alpha) : 0;
+    const rawAlpha = e.alpha;
+    if (rawAlpha === null || rawAlpha === undefined) return;
+
+    if (lastRawAlpha === null) {
+        lastRawAlpha = rawAlpha;
+    }
+
+    let diff = rawAlpha - lastRawAlpha;
+    if (diff > 180) {
+        alphaOffset -= 360;
+    } else if (diff < -180) {
+        alphaOffset += 360;
+    }
+    lastRawAlpha = rawAlpha;
+
+    const continuousAlpha = rawAlpha + alphaOffset;
+
+    const alpha = THREE.MathUtils.degToRad(continuousAlpha);
     const beta = e.beta ? THREE.MathUtils.degToRad(e.beta) : 0;
     const gamma = e.gamma ? THREE.MathUtils.degToRad(e.gamma) : 0;
 
-    if (alphaElem) alphaElem.textContent = e.alpha ? e.alpha.toFixed(1) : '0';
+    if (alphaElem) alphaElem.textContent = continuousAlpha.toFixed(1);
     if (betaElem) betaElem.textContent = e.beta ? e.beta.toFixed(1) : '0';
     if (gammaElem) gammaElem.textContent = e.gamma ? e.gamma.toFixed(1) : '0';
 
@@ -186,13 +207,16 @@ function handleOrientation(e) {
     adjustQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     deviceQuat.multiply(adjustQuaternion);
 
-    camera.quaternion.copy(deviceQuat);
+    targetDeviceQuat.copy(deviceQuat);
 }
 
 function animate() {
     requestAnimationFrame(animate);
 
     if (!permissionBtn || permissionBtn.style.display !== 'none') {
+        currentDeviceQuat.slerp(targetDeviceQuat, 0.08);
+        camera.quaternion.copy(currentDeviceQuat);
+    } else {
         rotationY += (targetRotationY - rotationY) * 0.05;
         rotationX += (targetRotationX - rotationX) * 0.05;
 

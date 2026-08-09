@@ -88,14 +88,14 @@ for (let i = 0; i < numMemories; i++) {
     createMemoryStarNode(msg, randomLilac);
 }
 
-// 3. Maus- & Touch-Steuerung
+// 3. Maus- & Touch-Steuerung (immer aktiv für Drag & Look)
 let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
 let targetRotationX = 0, targetRotationY = 0;
 let rotationX = 0, rotationY = 0;
 
 window.addEventListener('mousedown', (e) => { 
-    if(e.target.closest('.interactive')) return;
+    if (e.target.closest('.interactive')) return;
     isMouseDown = true; 
     mouseX = e.clientX; 
     mouseY = e.clientY; 
@@ -129,7 +129,7 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', () => { isMouseDown = false; });
 
 window.addEventListener('touchstart', (e) => {
-    if(e.target.closest('.interactive')) return;
+    if (e.target.closest('.interactive')) return;
     if (e.touches.length === 1) { 
         isMouseDown = true; 
         mouseX = e.touches[0].clientX; 
@@ -208,7 +208,7 @@ let targetDeviceQuat = new THREE.Quaternion();
 let currentDeviceQuat = new THREE.Quaternion();
 let lastAlpha = null;
 let accumulatedAlpha = 0;
-let isGyroActive = false; // Status für Gyroskop
+let isGyroActive = false;
 
 if (permissionBtn) {
     permissionBtn.addEventListener('click', () => {
@@ -245,7 +245,7 @@ function handleOrientation(e) {
     lastAlpha = e.alpha;
 
     const alpha = THREE.MathUtils.degToRad(accumulatedAlpha);
-    const beta = THREE.MathUtils.degToRad(e.beta);
+    const beta = THREE.MathUtils.degToRaw ? THREE.MathUtils.degToRad(e.beta) : THREE.MathUtils.degToRad(e.beta);
     const gamma = THREE.MathUtils.degToRad(e.gamma);
 
     if (alphaElem) alphaElem.textContent = accumulatedAlpha.toFixed(1);
@@ -255,7 +255,7 @@ function handleOrientation(e) {
     const zee = new THREE.Vector3(0, 0, 1);
     const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
 
-    const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+    const euler = new THREE.Euler(THREE.MathUtils.degToRad(e.beta), alpha, -THREE.MathUtils.degToRad(e.gamma), 'YXZ');
     const q = new THREE.Quaternion().setFromEuler(euler);
     const qOrient = new THREE.Quaternion().setFromAxisAngle(zee, -orient);
     q.multiply(qOrient);
@@ -265,14 +265,19 @@ function handleOrientation(e) {
     targetDeviceQuat.copy(q);
 }
 
-// 7. Render-Schleife
+// 7. Render-Schleife (kombiniert Gyro-Ausrichtung + sanfte Touch-/Maus-Rotation als Offset)
 function animate() {
     requestAnimationFrame(animate);
 
-    // HIER KORRIGIERT: Nutzt die saubere isGyroActive Variable
     if (isGyroActive) {
         currentDeviceQuat.slerp(targetDeviceQuat, 0.15);
         camera.quaternion.copy(currentDeviceQuat);
+
+        // Erlaubt zusätzlich Touch/Maus-Wischen als Drehung obendrauf, falls gewünscht
+        rotationY += (targetRotationY - rotationY) * 0.05;
+        rotationX += (targetRotationX - rotationX) * 0.05;
+        const extraRotation = new THREE.Euler(rotationX, rotationY, 0, 'YXZ');
+        camera.quaternion.multiply(new THREE.Quaternion().setFromEuler(extraRotation));
     } else {
         rotationY += (targetRotationY - rotationY) * 0.05;
         rotationX += (targetRotationX - rotationX) * 0.05;

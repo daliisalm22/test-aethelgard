@@ -83,8 +83,6 @@ let manualPitch = 0;
 let isTiltActive = false;
 let deviceQuaternion = new THREE.Quaternion();
 let manualQuaternion = new THREE.Quaternion();
-let baseDeviceQuaternion = null;
-let hasBaseOrientation = false;
 
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
@@ -170,12 +168,7 @@ function handleOrientation(e) {
     const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     q.premultiply(qAdjust);
 
-    if (!hasBaseOrientation) {
-        baseDeviceQuaternion = q.clone().invert();
-        hasBaseOrientation = true;
-    }
-
-    deviceQuaternion.copy(baseDeviceQuaternion).multiply(q);
+    deviceQuaternion.copy(q);
 }
 
 let currentCameraQuaternion = new THREE.Quaternion();
@@ -186,7 +179,7 @@ function animate() {
     manualQuaternion.setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
 
     let targetQuaternion = new THREE.Quaternion();
-    if (isTiltActive && hasBaseOrientation) {
+    if (isTiltActive) {
         targetQuaternion.copy(deviceQuaternion).multiply(manualQuaternion);
     } else {
         targetQuaternion.copy(manualQuaternion);

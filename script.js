@@ -38,19 +38,27 @@ function savePrefs() {
 }
 
 const seedStars = [
-    { id: 'seed-1',  name: 'Vesper',     message: 'A quiet night under the old observatory.', category: 'featured',  color: '#c4bffa', image: 'img/large_star.png' },
-    { id: 'seed-2',  name: 'Astraea',    message: 'First lines of code that actually compiled.', category: 'featured', color: '#dad6fa', image: 'img/medium_star.png' },
-    { id: 'seed-3',  name: 'Lumen',      message: 'Looking for constellations that did not exist.', category: 'zodiac',   color: '#b2afd0', image: 'img/small_star.png' },
-    { id: 'seed-4',  name: 'Nyx',        message: 'We promised to meet again when the comets return.', category: 'mythology', color: '#797a96', image: 'img/large_star.png' },
-    { id: 'seed-5',  name: 'Eos',        message: 'Whispering secrets into the digital void.', category: 'mythology', color: '#5d5777', image: 'img/medium_star.png' },
-    { id: 'seed-6',  name: 'Orion',      message: 'The universe is vast, but I found your orbit.', category: 'bright',   color: '#9b8fc9', image: 'img/small_star.png' },
-    { id: 'seed-7',  name: 'Lyra',       message: 'Every song we never finished still hums up here.', category: 'zodiac',   color: '#c4bffa', image: 'img/large_star.png' },
-    { id: 'seed-8',  name: 'Andromeda',  message: 'A galaxy of what-ifs and almosts.', category: 'zodiac',    color: '#dad6fa', image: 'img/medium_star.png' },
-    { id: 'seed-9',  name: 'Polaris',    message: 'Steady when everything else drifted.', category: 'bright',    color: '#e8e4ff', image: 'img/small_star.png' },
-    { id: 'seed-10', name: 'Sirius',     message: 'The brightest goodbye I ever knew.', category: 'bright',     color: '#f0edff', image: 'img/large_star.png' },
-    { id: 'seed-11', name: 'Pegasus',    message: 'Wings of hope stitched from stardust.', category: 'mythology', color: '#b2afd0', image: 'img/medium_star.png' },
-    { id: 'seed-12', name: 'Cassiopeia', message: 'A throne of light for the lonely queens.', category: 'featured',  color: '#dad6fa', image: 'img/small_star.png' },
+    { id: 'seed-3',  name: 'Lumen',      message: 'Looking for constellations that did not exist.', category: 'memories',    color: '#b2afd0', image: 'img/small_star.png' },
+    { id: 'seed-4',  name: 'Nyx',        message: 'We promised to meet again when the comets return.', category: 'ideas',       color: '#797a96', image: 'img/large_star.png' },
+    { id: 'seed-5',  name: 'Eos',        message: 'Whispering secrets into the digital void.', category: 'ideas',       color: '#5d5777', image: 'img/medium_star.png' },
+    { id: 'seed-6',  name: 'Orion',      message: 'The universe is vast, but I found your orbit.', category: 'achievements', color: '#9b8fc9', image: 'img/small_star.png' },
+    { id: 'seed-7',  name: 'Lyra',       message: 'Every song we never finished still hums up here.', category: 'memories',    color: '#c4bffa', image: 'img/large_star.png' },
+    { id: 'seed-8',  name: 'Andromeda',  message: 'A galaxy of what-ifs and almosts.', category: 'memories',    color: '#dad6fa', image: 'img/medium_star.png' },
+    { id: 'seed-9',  name: 'Polaris',    message: 'Steady when everything else drifted.', category: 'achievements', color: '#e8e4ff', image: 'img/small_star.png' },
+    { id: 'seed-10', name: 'Sirius',     message: 'The brightest goodbye I ever knew.', category: 'achievements', color: '#f0edff', image: 'img/large_star.png' },
+    { id: 'seed-11', name: 'Pegasus',    message: 'Wings of hope stitched from stardust.', category: 'ideas',       color: '#b2afd0', image: 'img/medium_star.png' },
 ];
+
+const CATEGORY_MIGRATION = {
+    zodiac: 'memories',
+    mythology: 'ideas',
+    bright: 'achievements',
+};
+
+function migrateCategory(cat) {
+    if (CATEGORY_MIGRATION[cat]) return CATEGORY_MIGRATION[cat];
+    return cat;
+}
 
 function loadStars() {
     try {
@@ -59,7 +67,10 @@ function loadStars() {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) {
                 const deletedIds = new Set(parsed.filter(s => s._deleted).map(s => s.id));
-                const userStars = parsed.filter(s => !s._deleted && !seedStars.some(d => d.id === s.id));
+                const userStars = parsed
+                    .filter(s => !s._deleted && !seedStars.some(d => d.id === s.id))
+                    .filter(s => s.category !== 'featured')
+                    .map(s => ({ ...s, category: migrateCategory(s.category) }));
                 const seeds = seedStars.filter(s => !deletedIds.has(s.id));
                 return [...userStars, ...seeds];
             }
@@ -770,8 +781,8 @@ function openDetails(star) {
     state.selectedStar = star;
     if (!detailsPanel) return;
 
-    detailsTitle.textContent = star.name || 'star';
-    detailsCategory.textContent = star.category || 'featured';
+detailsTitle.textContent = star.name || 'star';
+    detailsCategory.textContent = star.category || 'memories';
     detailsText.textContent = `"${star.message}"`;
 
     if (star.image) {
@@ -915,7 +926,7 @@ if (submitMemBtn && userMemInput && starColorPicker && subModal) {
     submitMemBtn.addEventListener('click', () => {
         const val = userMemInput.value.trim();
         const hexVal = starColorPicker.value;
-        const cat = newStarCategory ? newStarCategory.value : 'featured';
+const cat = newStarCategory ? newStarCategory.value : 'memories';
         if (val) {
             const newStar = {
                 id: 'user-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),

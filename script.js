@@ -172,35 +172,39 @@ if (permissionBtn) {
 
 let currentCameraQuaternion = new THREE.Quaternion();
 
+// Hilfsobjekte für saubere Quaternion-Berechnungen ohne Gimbal Lock oder Pirouetten-Effekt
+const zee = new THREE.Vector3(0, 0, 1);
+const cameraQuaternion = new THREE.Quaternion();
+const deviceQuaternion = new THREE.Quaternion();
+const screenTransform = new THREE.Quaternion();
+const worldTransform = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -90 Grad X-Achse
+
 function animate() {
     requestAnimationFrame(animate);
 
     if (motionActive) {
-        // Umwandlung in Radiant mit sauberer Achsenzuordnung für echtes Umschauen im Kugelinneren
-        const alphaRad = THREE.MathUtils.degToRad(rawAlpha);
-        const betaRad = THREE.MathUtils.degToRad(rawBeta - 90); // Korrigiert den Nullpunkt auf die Augenhöhe
-        const gammaRad = THREE.MathUtils.degToRad(rawGamma);
+        const alpha = THREE.MathUtils.degToRad(rawAlpha);
+        const beta = THREE.MathUtils.degToRad(rawBeta);
+        const gamma = THREE.MathUtils.degToRad(rawGamma);
 
-        // Wir nutzen Yaw (Drehung um Y-Achse via Alpha/Gamma) und Pitch (Neigung via Beta) 
-        // exakt so, dass es sich wie das Verschieben des Blickfelds anfühlt.
-        const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -alphaRad);
-        const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -betaRad);
-        const qRoll = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), gammaRad);
+        // Standard DeviceOrientation zu Quaternion Konvertierung (verhindert das Verdrehen zur Seite)
+        const cAlpha = Math.cos(alpha / 2);
+        const sAlpha = Math.sin(alpha / 2);
+        const cBeta = Math.cos(beta / 2);
+        const sBeta = Math.sin(beta / 2);
+        const cGamma = Math.cos(gamma / 2);
+        const sGamma = Math.sin(gamma / 2);
 
-        const targetQuaternion = new THREE.Quaternion();
-        targetQuaternion.multiplyQuaternions(qYaw, qPitch);
-        targetQuaternion.multiply(qRoll);
+        // Ordnung YXZ (Kompass, Neigung, Rollen) für die Gerätesensorik
+        deviceQuaternion.set(
+            sAlpha * cBeta * cGamma - cAlpha * sBeta * sGamma,
+            cAlpha * sBeta * cGamma + sAlpha * cBeta * sGamma,
+            cAlpha * cBeta * sGamma - sAlpha * sBeta * cGamma,
+            cAlpha * cBeta * cGamma + sAlpha * sBeta * sGamma
+        );
 
-        currentCameraQuaternion.slerp(targetQuaternion, 0.15);
-        camera.quaternion.copy(currentCameraQuaternion);
-    } else {
-        const manualQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
-        currentCameraQuaternion.slerp(manualQuaternion, 0.15);
-        camera.quaternion.copy(currentCameraQuaternion);
-    }
-
-    starField.rotation.y += 0.0005;
-    renderer.render(scene, camera);
-}
-
-animate();
+        // Anpassung an die Ausrichtung des Bildschirms (Portrait-Modus)
+        const orientationAngle = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+        screenTransform.setFromAxisAngle(zee, -orientationAngle);
+        
+        cameraQuaternion.copy(deviceQuaternion);

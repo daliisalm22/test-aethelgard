@@ -78,20 +78,17 @@ for (let i = 0; i < numMemories; i++) {
 let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
 
-// Offsets combined from mouse drag and phone orientation
 let manualRotationY = 0;
 let manualRotationX = 0;
 
 let isTiltActive = false;
-let tiltRotationY = 0;
-let tiltRotationX = 0;
-let tiltRotationZ = 0;
+let deviceQuaternion = new THREE.Quaternion();
+let manualQuaternion = new THREE.Quaternion();
 
-let initialAlpha = null;
-let initialBeta = null;
-let initialGamma = null;
+let baseDeviceQuaternion = null;
+let hasBaseOrientation = false;
 
-// Mouse & Touch Drag Listeners (Always active)
+// Mouse & Touch Drag Listeners
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
     isMouseDown = true; 
@@ -158,44 +155,52 @@ if (permissionBtn) {
 function handleOrientation(e) {
     if (e.alpha === null || e.beta === null || e.gamma === null) return;
 
-    if (initialAlpha === null) {
-        initialAlpha = e.alpha;
-        initialBeta = e.beta;
-        initialGamma = e.gamma;
-    }
-
     if (alphaElem) alphaElem.textContent = e.alpha.toFixed(1);
     if (betaElem) betaElem.textContent = e.beta.toFixed(1);
     if (gammaElem) gammaElem.textContent = e.gamma.toFixed(1);
 
-    let deltaAlpha = e.alpha - initialAlpha;
-    let deltaBeta = e.beta - initialBeta;
-    let deltaGamma = e.gamma - initialGamma;
+    const alpha = THREE.MathUtils.degToRad(e.alpha);
+    const beta = THREE.MathUtils.degToRad(e.beta);
+    const gamma = THREE.MathUtils.degToRad(e.gamma);
 
-    tiltRotationY = THREE.MathUtils.degToRad(-deltaAlpha);
-    tiltRotationX = THREE.MathUtils.degToRad(deltaBeta);
-    tiltRotationZ = THREE.MathUtils.degToRad(-deltaGamma);
+    // Standard W3C DeviceOrientation to Three.js coordinate mapping using Quaternions (handles 360/0 wrap cleanly without gimbal lock or snapping)
+    const zee = new THREE.Vector3(0, 0, 1);
+    const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
+    const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+    const q = new THREE.Quaternion().setFromEuler(euler);
+    const qOrient = new THREE.Quaternion().setFromAxisAngle(zee, -orient);
+    q.multiply(qOrient);
+    const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    q.premultiply(qAdjust);
+
+    if (!hasBaseOrientation) {
+        baseDeviceQuaternion = q.clone().invert();
+        hasBaseOrientation = true;
+    }
+
+    deviceQuaternion.copy(baseDeviceQuaternion).multiply(q);
 }
 
-let currentRotY = 0;
-let currentRotX = 0;
-let currentRotZ = 0;
+let currentCameraQuaternion = new THREE.Quaternion();
 
 function animate() {
     requestAnimationFrame(animate);
 
-    let targetY = manualRotationY + (isTiltActive ? tiltRotationY : 0);
-    let targetX = manualRotationX + (isTiltActive ? tiltRotationX : 0);
-    let targetZ = isTiltActive ? tiltRotationZ : 0;
+    // Construct manual rotation quaternion from drag offsets
+    manualQuaternion.setFromEuler(new THREE.Euler(manualRotationX, manualRotationY, 0, 'YXZ'));
 
-    currentRotY += (targetY - currentRotY) * 0.1;
-    currentRotX += (targetX - currentRotX) * 0.1;
-    currentRotZ += (targetZ - currentRotZ) * 0.1;
+    // Combine orientation and manual drag seamlessly in 3D quaternion space
+    let targetQuaternion = new THREE.Quaternion();
+    if (isTiltActive && hasBaseOrientation) {
+        targetQuaternion.copy(deviceQuaternion).multiply(manualQuaternion);
+    } else {
+        targetQuaternion.copy(manualQuaternion);
+    }
 
-    camera.rotation.order = 'YXZ';
-    camera.rotation.y = currentRotY;
-    camera.rotation.x = currentRotX;
-    camera.rotation.z = currentRotZ;
+    // Smooth spherical interpolation (slerp) for seamless rotation without jumps
+    currentCameraQuaternion.slerp(targetQuaternion, 0.15);
+    camera.quaternion.copy(currentCameraQuaternion);
 
     starField.rotation.y += 0.0005;
     renderer.render(scene, camera);

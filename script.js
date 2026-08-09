@@ -176,19 +176,14 @@ function animate() {
     requestAnimationFrame(animate);
 
     if (motionActive) {
-        const alpha = THREE.MathUtils.degToRad(rawAlpha);
         const beta = THREE.MathUtils.degToRad(rawBeta);
         const gamma = THREE.MathUtils.degToRad(rawGamma);
 
-        const zee = new THREE.Vector3(0, 0, 1);
-        const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
-
-        const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-        const q = new THREE.Quaternion().setFromEuler(euler);
-        const qOrient = new THREE.Quaternion().setFromAxisAngle(zee, -orient);
-        q.multiply(qOrient);
-        const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-        q.premultiply(qAdjust);
+        // Using Beta for pitch (up/down) and Gamma for panning/sliding left-right around the world center
+        const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), beta - Math.PI / 2);
+        const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -gamma);
+        
+        const q = new THREE.Quaternion().multiplyQuaternions(qYaw, qPitch);
 
         currentCameraQuaternion.slerp(q, 0.15);
         camera.quaternion.copy(currentCameraQuaternion);

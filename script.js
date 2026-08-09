@@ -19,20 +19,22 @@ window.addEventListener('resize', () => {
 
 const numStars = 2000;
 const bubbleRadius = 1500;
-const starGeometry = new THREE.BufferGeometry();
-const starPositions = new Float32Array(numStars * 3);
 
-for (let i = 0; i < numStars; i++) {
-    const u = Math.random();
-    const v = Math.random();
-    const theta = u * 2.0 * Math.PI;
-    const phi = Math.acos(2.0 * v - 1.0);
-    const r = bubbleRadius * Math.cbrt(Math.random());
+function createStarFieldTexture(count, size, texture) {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
 
-    starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    starPositions[i * 3 + 2] = r * Math.cos(phi);
-}
+    for (let i = 0; i < count; i++) {
+        const u = Math.random();
+        const v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+        const r = bubbleRadius * Math.cbrt(Math.random());
+
+        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = r * Math.cos(phi);
+    }
 
 starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
 
@@ -76,8 +78,8 @@ function createMemoryStarNode(messageText, hexColor = 0xdad6fa) {
         message: messageText
     };
 
-    scene.add(memoryStar);
-    memoryStars.push(memoryStar);
+    scene.add(sprite);
+    memoryStars.push(sprite);
 }
 
 for (let i = 0; i < numMemories; i++) {

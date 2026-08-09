@@ -103,29 +103,9 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    resizeParticles();
 });
 
-const numStars = 1500;
 const bubbleRadius = 1500;
-const starGeometry = new THREE.BufferGeometry();
-const starPositions = new Float32Array(numStars * 3);
-
-for (let i = 0; i < numStars; i++) {
-    const u = Math.random();
-    const v = Math.random();
-    const theta = u * 2.0 * Math.PI;
-    const phi = Math.acos(2.0 * v - 1.0);
-    const r = bubbleRadius * Math.cbrt(Math.random());
-    starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    starPositions[i * 3 + 2] = r * Math.cos(phi);
-}
-
-starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-const starMaterial = new THREE.PointsMaterial({ color: 0xf1edee, size: 6, sizeAttenuation: true, transparent: true, opacity: 0.8 });
-const starField = new THREE.Points(starGeometry, starMaterial);
-scene.add(starField);
 
 const textureLoader = new THREE.TextureLoader();
 const textureCache = {};
@@ -133,9 +113,81 @@ const textureCache = {};
 function getTexture(path) {
     if (!textureCache[path]) {
         textureCache[path] = textureLoader.load(path);
+        textureCache[path].minFilter = THREE.LinearFilter;
+        textureCache[path].magFilter = THREE.LinearFilter;
     }
     return textureCache[path];
 }
+
+const smallStarTexture = getTexture('img/small_star.png');
+const mediumStarTexture = getTexture('img/medium_star.png');
+const largeStarTexture = getTexture('img/large_star.png');
+
+function createBackgroundStars(count, texture, size, opacity) {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+        const u = Math.random();
+        const v = Math.random();
+
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+
+        const r = bubbleRadius * Math.cbrt(Math.random());
+
+        positions[i * 3] =
+            r * Math.sin(phi) * Math.cos(theta);
+
+        positions[i * 3 + 1] =
+            r * Math.sin(phi) * Math.sin(theta);
+
+        positions[i * 3 + 2] =
+            r * Math.cos(phi);
+    }
+
+    geometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(positions, 3)
+    );
+
+    const material = new THREE.PointsMaterial({
+        map: texture,
+        color: 0xffffff,
+        size,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity,
+        depthWrite: false,
+        alphaTest: 0.01
+    });
+
+    const field = new THREE.Points(geometry, material);
+    scene.add(field);
+
+    return field;
+}
+
+const smallStarField = createBackgroundStars(
+    1050,
+    smallStarTexture,
+    5,
+    0.65
+);
+
+const mediumStarField = createBackgroundStars(
+    450,
+    mediumStarTexture,
+    9,
+    0.8
+);
+
+const starField = new THREE.Group();
+
+starField.add(smallStarField);
+starField.add(mediumStarField);
+
+scene.add(starField);
 
 const memoryStars = [];
 
@@ -163,7 +215,16 @@ function createMemoryStarNode(starData) {
         r * Math.cos(phi)
     );
 
-    const baseScale = 30 + Math.random() * 40;
+    let baseScale;
+
+    if (texPath.includes('large_star')) {
+        baseScale = 90 + Math.random() * 40;
+    } else if (texPath.includes('medium_star')) {
+        baseScale = 50 + Math.random() * 25;
+    } else {
+        baseScale = 35 + Math.random() * 20;
+    }
+    
     memoryStar.scale.set(baseScale, baseScale, baseScale);
 
     memoryStar.userData.starId = starData.id;
@@ -284,73 +345,17 @@ function updateMemoryStars(time) {
     });
 }
 
-const particleCanvas = document.getElementById('particle-canvas');
-const pctx = particleCanvas ? particleCanvas.getContext('2d') : null;
-let particles = [];
+const bgMusic = document.getElementById('bg-music');
 
-function resizeParticles() {
-    if (!particleCanvas) return;
-    particleCanvas.width = window.innerWidth;
-    particleCanvas.height = window.innerHeight;
-    initParticles();
-}
-
-function initParticles() {
-    if (!pctx) return;
-    const count = state.reducedMotion ? 20 : Math.min(90, Math.floor(window.innerWidth * window.innerHeight / 16000));
-    particles = [];
-    for (let i = 0; i < count; i++) {
-        particles.push({
-            x: Math.random() * particleCanvas.width,
-            y: Math.random() * particleCanvas.height,
-            r: Math.random() * 2.2 + 0.4,
-            vx: (Math.random() - 0.5) * 0.12,
-            vy: (Math.random() - 0.5) * 0.12,
-            o: Math.random() * 0.5 + 0.15,
-            tw: Math.random() * 6.28,
-        });
-    }
-}
-
-let lastParticleDraw = 0;
-function drawParticles(time) {
-    if (!pctx) return;
-    if (state.reducedMotion) {
-        if (time - lastParticleDraw > 2000) {
-            renderParticles(0);
-            lastParticleDraw = time;
-        }
-        return;
-    }
-    renderParticles(time);
-}
-
-function renderParticles(time) {
-    pctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-    const glowColor = state.starGlowColor;
-    particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < -5) p.x = particleCanvas.width + 5;
-        if (p.x > particleCanvas.width + 5) p.x = -5;
-        if (p.y < -5) p.y = particleCanvas.height + 5;
-        if (p.y > particleCanvas.height + 5) p.y = -5;
-        const twinkle = 0.6 + 0.4 * Math.sin(time * 0.001 + p.tw);
-        pctx.beginPath();
-        pctx.arc(p.x, p.y, p.r, 0, 6.283);
-        pctx.fillStyle = glowColor;
-        pctx.globalAlpha = p.o * twinkle;
-        pctx.fill();
-    });
-    pctx.globalAlpha = 1;
+if (bgMusic) {
+    bgMusic.loop = true;
+    bgMusic.preload = 'auto';
 }
 
 const AudioManager = (() => {
     let ctx = null;
     let master = null;
-    let musicGain = null;
     let sfxGain = null;
-    let musicNodes = null;
     let initialized = false;
     let audioAvailable = true;
 
@@ -358,105 +363,163 @@ const AudioManager = (() => {
         if (!initialized) {
             try {
                 ctx = new (window.AudioContext || window.webkitAudioContext)();
+
                 master = ctx.createGain();
-                master.connect(ctx.destination);
-                musicGain = ctx.createGain();
                 sfxGain = ctx.createGain();
-                musicGain.connect(master);
+
                 sfxGain.connect(master);
+                master.connect(ctx.destination);
+
                 master.gain.value = state.audio.volume;
-                musicGain.gain.value = state.audio.musicOn ? 0.5 : 0;
                 sfxGain.gain.value = state.audio.sfxOn ? 1 : 0;
+
                 initialized = true;
             } catch (e) {
                 audioAvailable = false;
             }
         }
-        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
+
         return audioAvailable && ctx;
     }
 
-    function startAmbient() {
-        if (!ctx || musicNodes || !state.audio.musicOn) return;
-        const now = ctx.currentTime;
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const lfo = ctx.createOscillator();
-        const lfoGain = ctx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.value = 55;
-        osc2.type = 'sine';
-        osc2.frequency.value = 55.7;
-        gain.gain.value = 0;
-        lfo.type = 'sine';
-        lfo.frequency.value = 0.08;
-        lfoGain.gain.value = 0.04;
-        lfo.connect(lfoGain);
-        lfoGain.connect(gain.gain);
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(musicGain);
-        gain.gain.linearRampToValueAtTime(0.12, now + 2);
-        osc1.start();
-        osc2.start();
-        lfo.start();
-        musicNodes = { osc1, osc2, lfo };
+    function startMusic() {
+        if (!bgMusic || !state.audio.musicOn) return;
+
+        bgMusic.volume = state.audio.volume;
+
+        const promise = bgMusic.play();
+
+        if (promise) {
+            promise.catch(() => {});
+        }
     }
 
-    function stopAmbient() {
-        if (musicNodes) {
-            const now = ctx.currentTime;
-            musicNodes.osc1.stop(now + 0.5);
-            musicNodes.osc2.stop(now + 0.5);
-            musicNodes.lfo.stop(now + 0.5);
-            musicNodes = null;
-        }
+    function stopMusic() {
+        if (!bgMusic) return;
+        bgMusic.pause();
     }
 
     function playTone(freq, duration, type = 'sine', vol = 0.2, slideTo = null) {
         if (!ensureContext() || !state.audio.sfxOn) return;
+
         const now = ctx.currentTime;
+
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+
         osc.type = type;
         osc.frequency.setValueAtTime(freq, now);
-        if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+
+        if (slideTo) {
+            osc.frequency.exponentialRampToValueAtTime(
+                slideTo,
+                now + duration
+            );
+        }
+
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(vol, now + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        gain.gain.exponentialRampToValueAtTime(
+            vol,
+            now + 0.02
+        );
+        gain.gain.exponentialRampToValueAtTime(
+            0.0001,
+            now + duration
+        );
+
         osc.connect(gain);
         gain.connect(sfxGain);
+
         osc.start(now);
         osc.stop(now + duration + 0.05);
     }
 
     return {
-        init() { ensureContext(); },
-        resume() { ensureContext(); },
+        init() {
+            ensureContext();
+
+            if (state.audio.musicOn) {
+                startMusic();
+            }
+        },
+
+        resume() {
+            ensureContext();
+
+            if (state.audio.musicOn) {
+                startMusic();
+            }
+        },
+
         setVolume(v) {
             state.audio.volume = v;
-            if (master) master.gain.value = v;
+
+            if (master) {
+                master.gain.value = v;
+            }
+
+            if (bgMusic) {
+                bgMusic.volume = v;
+            }
+
             savePrefs();
         },
+
         setMusicOn(on) {
             state.audio.musicOn = on;
-            if (on) { if (ensureContext()) startAmbient(); }
-            else if (musicNodes) stopAmbient();
+
+            if (on) {
+                startMusic();
+            } else {
+                stopMusic();
+            }
+
             savePrefs();
         },
+
         setSfxOn(on) {
             state.audio.sfxOn = on;
-            if (sfxGain) sfxGain.gain.value = on ? 1 : 0;
+
+            if (sfxGain) {
+                sfxGain.gain.value = on ? 1 : 0;
+            }
+
             savePrefs();
         },
-        holdTick() { playTone(440, 0.06, 'sine', 0.05); },
-        holdComplete() { playTone(523.25, 0.25, 'sine', 0.2, 784); },
-        holdCancel() { playTone(300, 0.12, 'triangle', 0.08, 200); },
-        categorySelect() { playTone(660, 0.1, 'tri', 0.12, 880); },
-        detailsOpen() { playTone(392, 0.2, 'sine', 0.15, 523); },
-        deleteConfirm() { playTone(220, 0.3, 'sawtooth', 0.12, 110); },
-        unfurl() { if (ensureContext() && state.audio.musicOn) startAmbient(); },
+
+        holdTick() {
+            playTone(440, 0.06, 'sine', 0.05);
+        },
+
+        holdComplete() {
+            playTone(523.25, 0.25, 'sine', 0.2, 784);
+        },
+
+        holdCancel() {
+            playTone(300, 0.12, 'triangle', 0.08, 200);
+        },
+
+        categorySelect() {
+            playTone(660, 0.1, 'triangle', 0.12, 880);
+        },
+
+        detailsOpen() {
+            playTone(392, 0.2, 'sine', 0.15, 523);
+        },
+
+        deleteConfirm() {
+            playTone(220, 0.3, 'sawtooth', 0.12, 110);
+        },
+
+        unfurl() {
+            if (state.audio.musicOn) {
+                startMusic();
+            }
+        }
     };
 })();
 
@@ -618,7 +681,7 @@ function onPointerDown(e) {
     downStar = getStarAtClient(e.clientX, e.clientY);
 
     if (downStar && downStar.visible !== false) {
-        startHold(downStar, e.pointerId);
+    startHold(downStar, e.pointerId);
     }
 }
 
@@ -1010,8 +1073,6 @@ function animate() {
         updateHold(now);
     }
 
-    drawParticles(now);
-
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
 }
@@ -1023,9 +1084,11 @@ function init() {
 
     applyGlowColor();
     syncAudioUI();
-    resizeParticles();
+
+    AudioManager.init();
 
     const canvas = renderer.domElement;
+
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);

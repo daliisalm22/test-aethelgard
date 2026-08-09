@@ -84,6 +84,9 @@ let isTiltActive = false;
 let deviceQuaternion = new THREE.Quaternion();
 let manualQuaternion = new THREE.Quaternion();
 
+let baseOrientationQuaternion = null;
+let hasBaseOrientation = false;
+
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
     isMouseDown = true; 
@@ -168,7 +171,12 @@ function handleOrientation(e) {
     const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     q.premultiply(qAdjust);
 
-    deviceQuaternion.copy(q);
+    if (!hasBaseOrientation) {
+        baseOrientationQuaternion = q.clone().invert();
+        hasBaseOrientation = true;
+    }
+
+    deviceQuaternion.copy(baseOrientationQuaternion).multiply(q);
 }
 
 let currentCameraQuaternion = new THREE.Quaternion();
@@ -179,8 +187,19 @@ function animate() {
     manualQuaternion.setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
 
     let targetQuaternion = new THREE.Quaternion();
-    if (isTiltActive) {
-        targetQuaternion.copy(deviceQuaternion).multiply(manualQuaternion);
+    if (isTiltActive && hasBaseOrientation) {
+        let worldUp = new THREE.Vector3(0, 1, 0);
+        let lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(deviceQuaternion);
+        let flatLookDir = new THREE.Vector3(lookDir.x, 0, lookDir.z).normalize();
+        
+        let yawCorrection = new THREE.Quaternion();
+        if (flatLookDir.lengthSq() > 0.001) {
+            let defaultForward = new THREE.Vector3(0, 0, -1);
+            yawCorrection.setFromUnitVectors(flatLookDir, defaultForward);
+        }
+
+        let correctedDeviceQ = yawCorrection.clone().multiply(deviceQuaternion);
+        targetQuaternion.copy(correctedDeviceQ).multiply(manualQuaternion);
     } else {
         targetQuaternion.copy(manualQuaternion);
     }

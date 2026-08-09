@@ -17,7 +17,6 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Create Stars
 const numStars = 1500;
 const bubbleRadius = 1500;
 const starGeometry = new THREE.BufferGeometry();
@@ -40,7 +39,6 @@ const starMaterial = new THREE.PointsMaterial({ color: 0xf1edee, size: 6, sizeAt
 const starField = new THREE.Points(starGeometry, starMaterial);
 scene.add(starField);
 
-// Create Memory Stars
 const memoryStars = [];
 const numMemories = 40;
 const sampleMemories = [
@@ -50,6 +48,8 @@ const sampleMemories = [
 ];
 
 const memoryGeo = new THREE.SphereGeometry(10, 16, 16);
+const lilacShades = [0xdad6fa, 0xb2afd0, 0x797a96, 0x5d5777, 0x9b8fc9, 0xc4bffa];
+
 for (let i = 0; i < numMemories; i++) {
     const u = Math.random();
     const v = Math.random();
@@ -57,7 +57,8 @@ for (let i = 0; i < numMemories; i++) {
     const phi = Math.acos(2.0 * v - 1.0);
     const r = (bubbleRadius * 0.8) * Math.cbrt(Math.random());
 
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+    const randomLilac = lilacShades[Math.floor(Math.random() * lilacShades.length)];
+    const material = new THREE.MeshBasicMaterial({ color: randomLilac });
     const memoryStar = new THREE.Mesh(memoryGeo, material);
     memoryStar.position.set(
         r * Math.sin(phi) * Math.cos(theta),
@@ -73,44 +74,60 @@ for (let i = 0; i < numMemories; i++) {
     memoryStars.push(memoryStar);
 }
 
-// Mouse / Touch Drag Fallback (Dragging moves your view across the globe)
 let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
-let targetRotationX = 0, targetRotationY = 0;
-let rotationX = 0, rotationY = 0;
 
-window.addEventListener('mousedown', (e) => { isMouseDown = true; mouseX = e.clientX; mouseY = e.clientY; });
+let manualYaw = 0;
+let manualPitch = 0;
+
+let isTiltActive = false;
+let deviceQuaternion = new THREE.Quaternion();
+let manualQuaternion = new THREE.Quaternion();
+let baseDeviceQuaternion = null;
+let hasBaseOrientation = false;
+
+window.addEventListener('mousedown', (e) => { 
+    if (e.target.closest('.interactive')) return;
+    isMouseDown = true; 
+    mouseX = e.clientX; 
+    mouseY = e.clientY; 
+});
+
 window.addEventListener('mousemove', (e) => {
     if (!isMouseDown) return;
-    targetRotationY -= (e.clientX - mouseX) * 0.003;
-    targetRotationX -= (e.clientY - mouseY) * 0.003;
-    targetRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, targetRotationX));
-    mouseX = e.clientX; mouseY = e.clientY;
+    manualYaw -= (e.clientX - mouseX) * 0.003;
+    manualPitch += (e.clientY - mouseY) * 0.003;
+    manualPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualPitch));
+    mouseX = e.clientX; 
+    mouseY = e.clientY;
 });
+
 window.addEventListener('mouseup', () => { isMouseDown = false; });
 
 window.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 1) { isMouseDown = true; mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; }
+    if (e.target.closest('.interactive')) return;
+    if (e.touches.length === 1) { 
+        isMouseDown = true; 
+        mouseX = e.touches[0].clientX; 
+        mouseY = e.touches[0].clientY; 
+    }
 });
+
 window.addEventListener('touchmove', (e) => {
     if (!isMouseDown || e.touches.length !== 1) return;
-    targetRotationY -= (e.touches[0].clientX - mouseX) * 0.003;
-    targetRotationX -= (e.touches[0].clientY - mouseY) * 0.003;
-    targetRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, targetRotationX));
-    mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY;
+    manualYaw -= (e.touches[0].clientX - mouseX) * 0.003;
+    manualPitch += (e.touches[0].clientY - mouseY) * 0.003;
+    manualPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualPitch));
+    mouseX = e.touches[0].clientX; 
+    mouseY = e.touches[0].clientY;
 });
+
 window.addEventListener('touchend', () => { isMouseDown = false; });
 
-// Gyroscope Globe Mapping
 const permissionBtn = document.getElementById('request-permission-btn');
 const alphaElem = document.getElementById('alpha');
 const betaElem = document.getElementById('beta');
 const gammaElem = document.getElementById('gamma');
-
-let targetDeviceQuat = new THREE.Quaternion();
-let currentDeviceQuat = new THREE.Quaternion();
-let lastAlpha = null;
-let accumulatedAlpha = 0;
 
 if (permissionBtn) {
     permissionBtn.addEventListener('click', () => {
@@ -119,12 +136,14 @@ if (permissionBtn) {
                 .then(response => {
                     if (response === 'granted') {
                         window.addEventListener('deviceorientation', handleOrientation, true);
+                        isTiltActive = true;
                         permissionBtn.style.display = 'none';
                     }
                 })
                 .catch(console.error);
         } else {
             window.addEventListener('deviceorientation', handleOrientation, true);
+            isTiltActive = true;
             permissionBtn.style.display = 'none';
         }
     });
@@ -133,51 +152,50 @@ if (permissionBtn) {
 function handleOrientation(e) {
     if (e.alpha === null || e.beta === null || e.gamma === null) return;
 
-    if (lastAlpha === null) {
-        lastAlpha = e.alpha;
-        accumulatedAlpha = e.alpha;
-    }
-
-    let deltaAlpha = e.alpha - lastAlpha;
-    if (deltaAlpha > 180) deltaAlpha -= 360;
-    if (deltaAlpha < -180) deltaAlpha += 360;
-    accumulatedAlpha += deltaAlpha;
-    lastAlpha = e.alpha;
-
-    const alpha = THREE.MathUtils.degToRad(accumulatedAlpha);
-    const beta = THREE.MathUtils.degToRad(e.beta);
-    const gamma = THREE.MathUtils.degToRad(e.gamma);
-
-    if (alphaElem) alphaElem.textContent = accumulatedAlpha.toFixed(1);
+    if (alphaElem) alphaElem.textContent = e.alpha.toFixed(1);
     if (betaElem) betaElem.textContent = e.beta.toFixed(1);
     if (gammaElem) gammaElem.textContent = e.gamma.toFixed(1);
 
-    // Correct coordinate transformation for proper inside-looking globe view
+    const alpha = THREE.MathUtils.degToRad(e.alpha);
+    const beta = THREE.MathUtils.degToRad(e.beta);
+    const gamma = THREE.MathUtils.degToRad(e.gamma);
+
     const zee = new THREE.Vector3(0, 0, 1);
+    const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
     const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
     const q = new THREE.Quaternion().setFromEuler(euler);
-    
+    const qOrient = new THREE.Quaternion().setFromAxisAngle(zee, -orient);
+    q.multiply(qOrient);
     const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     q.premultiply(qAdjust);
 
-    targetDeviceQuat.copy(q);
+    if (!hasBaseOrientation) {
+        baseDeviceQuaternion = q.clone().invert();
+        hasBaseOrientation = true;
+    }
+
+    deviceQuaternion.copy(baseDeviceQuaternion).multiply(q);
 }
+
+let currentCameraQuaternion = new THREE.Quaternion();
 
 function animate() {
     requestAnimationFrame(animate);
 
-    if (!permissionBtn || permissionBtn.style.display !== 'none') {
-        currentDeviceQuat.slerp(targetDeviceQuat, 0.15);
-        camera.quaternion.copy(currentDeviceQuat);
+    manualQuaternion.setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
+
+    let targetQuaternion = new THREE.Quaternion();
+    if (isTiltActive && hasBaseOrientation) {
+        targetQuaternion.copy(deviceQuaternion).multiply(manualQuaternion);
     } else {
-        rotationY += (targetRotationY - rotationY) * 0.05;
-        rotationX += (targetRotationX - rotationX) * 0.05;
-        
-        camera.rotation.order = 'YXZ';
-        camera.rotation.y = rotationY;
-        camera.rotation.x = rotationX;
+        targetQuaternion.copy(manualQuaternion);
     }
 
+    currentCameraQuaternion.slerp(targetQuaternion, 0.15);
+    camera.quaternion.copy(currentCameraQuaternion);
+
+    starField.rotation.y += 0.0005;
     renderer.render(scene, camera);
 }
 

@@ -88,7 +88,7 @@ let rawBeta = 0;
 let rawGamma = 0;
 let motionActive = false;
 
-// Maus- / Touch-Fallback (falls kein Gyroskop aktiv)
+// Maus- / Touch-Fallback
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
     if (motionActive) return;
@@ -176,46 +176,19 @@ if (permissionBtn) {
 }
 
 let currentCameraQuaternion = new THREE.Quaternion();
-
-// Hilfsfunktionen für korrekte Geräte-Ausrichtung in Three.js
-constzee = new THREE.Vector3(0, 0, -1);
 const targetQuaternion = new THREE.Quaternion();
-const alphaQuaternion = new THREE.Quaternion();
-const axisX = new THREE.Vector3(1, 0, 0);
-
-function setObjectQuaternion(quaternion, alpha, beta, gamma, orient) {
-    const degToRad = Math.PI / 180;
-    
-    // Konvertierung der Euler-Winkel des Handys in Three.js Quaternions
-    const zee = new THREE.Vector3(0, 0, 1);
-    const x = beta * degToRad;
-    const y = gamma * degToRad;
-    const z = alpha * degToRad;
-    const oriente = orient * degToRad;
-
-    const c = new THREE.Euler();
-    c.set(x, y, z, 'YXZ'); // Wichtig: Richtige Achsenreihenfolge für das Smartphone
-    quaternion.setFromEuler(c);
-    
-    // Korrektur für die Blickrichtung (damit man "nach vorne" statt nach oben schaut)
-    const worldAxis = new THREE.Vector3(1, 0, 0);
-    quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(worldAxis, -Math.PI / 2));
-}
 
 function animate() {
     requestAnimationFrame(animate);
 
     if (motionActive) {
-        // Saubere Berechnung der Ausrichtung basierend auf Alpha, Beta, Gamma
         const alpha = THREE.MathUtils.degToRad(rawAlpha);
         const beta = THREE.MathUtils.degToRad(rawBeta);
         const gamma = THREE.MathUtils.degToRad(rawGamma);
 
-        // Wir nutzen eine standardisierte Rotationsreihenfolge für das Handy im Hochformat
         const qEuler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
         targetQuaternion.setFromEuler(qEuler);
 
-        // Korrektur-Rotation, damit die Kamera waagerecht in den Raum blickt
         const correction = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
         targetQuaternion.multiply(correction);
 

@@ -78,7 +78,6 @@ for (let i = 0; i < numMemories; i++) {
 let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
 
-// Offsets combined from mouse drag and phone orientation
 let manualRotationY = 0;
 let manualRotationX = 0;
 
@@ -91,7 +90,10 @@ let initialAlpha = null;
 let initialBeta = null;
 let initialGamma = null;
 
-// Mouse & Touch Drag Listeners (Always active)
+let lastAlpha = null;
+let accumulatedAlphaOffset = 0;
+
+// Mouse & Touch Drag Listeners
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
     isMouseDown = true; 
@@ -162,17 +164,26 @@ function handleOrientation(e) {
         initialAlpha = e.alpha;
         initialBeta = e.beta;
         initialGamma = e.gamma;
+        lastAlpha = e.alpha;
+        accumulatedAlphaOffset = 0;
     }
+
+    // Calculate continuous delta across the 360° / 0° wrap-around boundary smoothly
+    let deltaAlpha = e.alpha - lastAlpha;
+    if (deltaAlpha > 180) deltaAlpha -= 360;
+    if (deltaAlpha < -180) deltaAlpha += 360;
+    
+    accumulatedAlphaOffset += deltaAlpha;
+    lastAlpha = e.alpha;
 
     if (alphaElem) alphaElem.textContent = e.alpha.toFixed(1);
     if (betaElem) betaElem.textContent = e.beta.toFixed(1);
     if (gammaElem) gammaElem.textContent = e.gamma.toFixed(1);
 
-    let deltaAlpha = e.alpha - initialAlpha;
     let deltaBeta = e.beta - initialBeta;
     let deltaGamma = e.gamma - initialGamma;
 
-    tiltRotationY = THREE.MathUtils.degToRad(-deltaAlpha);
+    tiltRotationY = THREE.MathUtils.degToRad(-accumulatedAlphaOffset);
     tiltRotationX = THREE.MathUtils.degToRad(deltaBeta);
     tiltRotationZ = THREE.MathUtils.degToRad(-deltaGamma);
 }
@@ -184,7 +195,6 @@ let currentRotZ = 0;
 function animate() {
     requestAnimationFrame(animate);
 
-    // Combine manual drag rotations with phone tilt rotations smoothly
     let targetY = manualRotationY + (isTiltActive ? tiltRotationY : 0);
     let targetX = manualRotationX + (isTiltActive ? tiltRotationX : 0);
     let targetZ = isTiltActive ? tiltRotationZ : 0;

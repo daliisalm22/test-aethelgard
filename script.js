@@ -17,24 +17,23 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// 1. Hintergrund-Sternenfeld (hier waren die Sterne verschwunden!)
 const numStars = 2000;
 const bubbleRadius = 1500;
+const starGeometry = new THREE.BufferGeometry();
+const starPositions = new Float32Array(numStars * 3);
 
-function createStarFieldTexture(count, size, texture) {
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(count * 3);
+for (let i = 0; i < numStars; i++) {
+    const u = Math.random();
+    const v = Math.random();
+    const theta = u * 2.0 * Math.PI;
+    const phi = Math.acos(2.0 * v - 1.0);
+    const r = bubbleRadius * Math.cbrt(Math.random());
 
-    for (let i = 0; i < count; i++) {
-        const u = Math.random();
-        const v = Math.random();
-        const theta = u * 2.0 * Math.PI;
-        const phi = Math.acos(2.0 * v - 1.0);
-        const r = bubbleRadius * Math.cbrt(Math.random());
-
-        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-        positions[i * 3 + 2] = r * Math.cos(phi);
-    }
+    starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+    starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    starPositions[i * 3 + 2] = r * Math.cos(phi);
+}
 
 starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
 
@@ -42,6 +41,7 @@ const starMaterial = new THREE.PointsMaterial({ color: 0xf1edee, size: 5, sizeAt
 const starField = new THREE.Points(starGeometry, starMaterial);
 scene.add(starField);
 
+// 2. Memory-Sterne & Zitate
 const memoryStars = [];
 const numMemories = 45;
 const sampleMemories = [
@@ -78,8 +78,8 @@ function createMemoryStarNode(messageText, hexColor = 0xdad6fa) {
         message: messageText
     };
 
-    scene.add(sprite);
-    memoryStars.push(sprite);
+    scene.add(memoryStar);
+    memoryStars.push(memoryStar);
 }
 
 for (let i = 0; i < numMemories; i++) {
@@ -88,6 +88,7 @@ for (let i = 0; i < numMemories; i++) {
     createMemoryStarNode(msg, randomLilac);
 }
 
+// 3. Maus- & Touch-Steuerung
 let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
 let targetRotationX = 0, targetRotationY = 0;
@@ -147,6 +148,7 @@ window.addEventListener('touchmove', (e) => {
 
 window.addEventListener('touchend', () => { isMouseDown = false; });
 
+// 4. Klick auf Sterne (Modals öffnen)
 window.addEventListener('click', (e) => {
     if(e.target.closest('.interactive')) return;
 
@@ -171,6 +173,7 @@ document.getElementById('close-modal-btn').addEventListener('click', () => {
     document.getElementById('memory-modal').classList.remove('active');
 });
 
+// 5. New Horizon Button & Farbauswahl Logik
 const horizonBtn = document.getElementById('new-horizon-btn');
 const subModal = document.getElementById('submission-modal');
 const closeSubBtn = document.getElementById('close-sub-btn');
@@ -196,6 +199,7 @@ submitMemBtn.addEventListener('click', () => {
     }
 });
 
+// 6. Gyroskop / Handy-Neigung
 const permissionBtn = document.getElementById('request-permission-btn');
 const alphaElem = document.getElementById('alpha');
 const betaElem = document.getElementById('beta');
@@ -258,6 +262,7 @@ function handleOrientation(e) {
     targetDeviceQuat.copy(q);
 }
 
+// 7. Render-Schleife
 function animate() {
     requestAnimationFrame(animate);
 

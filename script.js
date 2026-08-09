@@ -80,21 +80,21 @@ let mouseX = 0, mouseY = 0;
 let manualYaw = 0;
 let manualPitch = 0;
 
-let isTiltActive = false;
-let deviceHeading = 0;
-let devicePitch = 0;
-let deviceRoll = 0;
-let hasDeviceOrientation = false;
+let rawAlpha = 0;
+let rawBeta = 0;
+let rawGamma = 0;
+let motionActive = false;
 
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
+    if (motionActive) return;
     isMouseDown = true; 
     mouseX = e.clientX; 
     mouseY = e.clientY; 
 });
 
 window.addEventListener('mousemove', (e) => {
-    if (!isMouseDown) return;
+    if (!isMouseDown || motionActive) return;
     manualYaw -= (e.clientX - mouseX) * 0.003;
     manualPitch += (e.clientY - mouseY) * 0.003;
     manualPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualPitch));
@@ -106,6 +106,7 @@ window.addEventListener('mouseup', () => { isMouseDown = false; });
 
 window.addEventListener('touchstart', (e) => {
     if (e.target.closest('.interactive')) return;
+    if (motionActive) return;
     if (e.touches.length === 1) { 
         isMouseDown = true; 
         mouseX = e.touches[0].clientX; 
@@ -114,7 +115,7 @@ window.addEventListener('touchstart', (e) => {
 });
 
 window.addEventListener('touchmove', (e) => {
-    if (!isMouseDown || e.touches.length !== 1) return;
+    if (!isMouseDown || motionActive || e.touches.length !== 1) return;
     manualYaw -= (e.touches[0].clientX - mouseX) * 0.003;
     manualPitch += (e.touches[0].clientY - mouseY) * 0.003;
     manualPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualPitch));
@@ -124,10 +125,28 @@ window.addEventListener('touchmove', (e) => {
 
 window.addEventListener('touchend', () => { isMouseDown = false; });
 
-const permissionBtn = document.getElementById('request-permission-btn');
-const alphaElem = document.getElementById('alpha');
-const betaElem = document.getElementById('beta');
-const gammaElem = document.getElementById('gamma');
+const permissionBtn = document.getElementById('enableGyroBtn') || document.getElementById('request-permission-btn');
+const alphaElem = document.getElementById('alpha') || document.getElementById('debugAlpha');
+const betaElem = document.getElementById('beta') || document.getElementById('debugBeta');
+const gammaElem = document.getElementById('gamma') || document.getElementById('debugGamma');
+
+function handleOrientation(event) {
+    rawAlpha = event.alpha !== null ? Math.round(event.alpha) : 0;
+    rawBeta = event.beta !== null ? Math.round(event.beta) : 0;
+    rawGamma = event.gamma !== null ? Math.round(event.gamma) : 0;
+
+    if (alphaElem) alphaElem.innerText = rawAlpha;
+    if (betaElem) betaElem.innerText = rawBeta;
+    if (gammaElem) gammaElem.innerText = rawGamma;
+
+    if (event.beta !== null || event.gamma !== null) {
+        motionActive = true;
+    }
+}
+
+if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+    window.addEventListener('deviceorientation', handleOrientation);
+}
 
 if (permissionBtn) {
     permissionBtn.addEventListener('click', () => {
@@ -135,31 +154,20 @@ if (permissionBtn) {
             DeviceOrientationEvent.requestPermission()
                 .then(response => {
                     if (response === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation, true);
-                        isTiltActive = true;
                         permissionBtn.style.display = 'none';
+                        window.addEventListener('deviceorientation', handleOrientation);
+                    } else {
+                        alert("Permission denied for motion sensors.");
                     }
                 })
                 .catch(console.error);
         } else {
-            window.addEventListener('deviceorientation', handleOrientation, true);
-            isTiltActive = true;
             permissionBtn.style.display = 'none';
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
         }
     });
-}
-
-function handleOrientation(e) {
-    if (e.alpha === null || e.beta === null || e.gamma === null) return;
-
-    if (alphaElem) alphaElem.textContent = e.alpha.toFixed(1);
-    if (betaElem) betaElem.textContent = e.beta.toFixed(1);
-    if (gammaElem) gammaElem.textContent = e.gamma.toFixed(1);
-
-    deviceHeading = THREE.MathUtils.degToRad(e.alpha);
-    devicePitch = THREE.MathUtils.degToRad(e.beta - 90);
-    deviceRoll = THREE.MathUtils.degToRad(e.gamma);
-    hasDeviceOrientation = true;
 }
 
 let currentCameraQuaternion = new THREE.Quaternion();
@@ -167,21 +175,28 @@ let currentCameraQuaternion = new THREE.Quaternion();
 function animate() {
     requestAnimationFrame(animate);
 
-    let targetQuaternion = new THREE.Quaternion();
+    if (motionActive) {
+        const alpha = THREE.MathUtils.degToRad(rawAlpha);
+        const beta = THREE.MathUtils.degToRad(rawBeta);
+        const gamma = THREE.MathUtils.degToRad(rawGamma);
 
-    if (isTiltActive && hasDeviceOrientation) {
-        const qSky = new THREE.Quaternion();
-        const euler = new THREE.Euler(-devicePitch, -deviceHeading, deviceRoll, 'YXZ');
-        qSky.setFromEuler(euler);
+        const zee = new THREE.Vector3(0, 0, 1);
+        const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
 
-        const qManual = new THREE.Quaternion().setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
-        targetQuaternion.copy(qSky).multiply(qManual);
+        const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+        const q = new THREE.Quaternion().setFromEuler(euler);
+        const qOrient = new THREE.Quaternion().setFromAxisAngle(zee, -orient);
+        q.multiply(qOrient);
+        const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+        q.premultiply(qAdjust);
+
+        currentCameraQuaternion.slerp(q, 0.15);
+        camera.quaternion.copy(currentCameraQuaternion);
     } else {
-        targetQuaternion.setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
+        const manualQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
+        currentCameraQuaternion.slerp(manualQuaternion, 0.15);
+        camera.quaternion.copy(currentCameraQuaternion);
     }
-
-    currentCameraQuaternion.slerp(targetQuaternion, 0.15);
-    camera.quaternion.copy(currentCameraQuaternion);
 
     starField.rotation.y += 0.0005;
     renderer.render(scene, camera);

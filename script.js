@@ -74,21 +74,18 @@ for (let i = 0; i < numMemories; i++) {
     memoryStars.push(memoryStar);
 }
 
-// Interaction state variables
 let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
 
-let manualRotationY = 0;
-let manualRotationX = 0;
+let manualYaw = 0;
+let manualPitch = 0;
 
 let isTiltActive = false;
 let deviceQuaternion = new THREE.Quaternion();
 let manualQuaternion = new THREE.Quaternion();
-
 let baseDeviceQuaternion = null;
 let hasBaseOrientation = false;
 
-// Mouse & Touch Drag Listeners
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
     isMouseDown = true; 
@@ -98,9 +95,9 @@ window.addEventListener('mousedown', (e) => {
 
 window.addEventListener('mousemove', (e) => {
     if (!isMouseDown) return;
-    manualRotationY += (e.clientX - mouseX) * 0.003;
-    manualRotationX += (e.clientY - mouseY) * 0.003;
-    manualRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualRotationX));
+    manualYaw -= (e.clientX - mouseX) * 0.003;
+    manualPitch += (e.clientY - mouseY) * 0.003;
+    manualPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualPitch));
     mouseX = e.clientX; 
     mouseY = e.clientY;
 });
@@ -118,9 +115,9 @@ window.addEventListener('touchstart', (e) => {
 
 window.addEventListener('touchmove', (e) => {
     if (!isMouseDown || e.touches.length !== 1) return;
-    manualRotationY += (e.touches[0].clientX - mouseX) * 0.003;
-    manualRotationX += (e.touches[0].clientY - mouseY) * 0.003;
-    manualRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualRotationX));
+    manualYaw -= (e.touches[0].clientX - mouseX) * 0.003;
+    manualPitch += (e.touches[0].clientY - mouseY) * 0.003;
+    manualPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualPitch));
     mouseX = e.touches[0].clientX; 
     mouseY = e.touches[0].clientY;
 });
@@ -163,7 +160,6 @@ function handleOrientation(e) {
     const beta = THREE.MathUtils.degToRad(e.beta);
     const gamma = THREE.MathUtils.degToRad(e.gamma);
 
-    // Standard W3C DeviceOrientation to Three.js coordinate mapping using Quaternions (handles 360/0 wrap cleanly without gimbal lock or snapping)
     const zee = new THREE.Vector3(0, 0, 1);
     const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
 
@@ -187,10 +183,8 @@ let currentCameraQuaternion = new THREE.Quaternion();
 function animate() {
     requestAnimationFrame(animate);
 
-    // Construct manual rotation quaternion from drag offsets
-    manualQuaternion.setFromEuler(new THREE.Euler(manualRotationX, manualRotationY, 0, 'YXZ'));
+    manualQuaternion.setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
 
-    // Combine orientation and manual drag seamlessly in 3D quaternion space
     let targetQuaternion = new THREE.Quaternion();
     if (isTiltActive && hasBaseOrientation) {
         targetQuaternion.copy(deviceQuaternion).multiply(manualQuaternion);
@@ -198,7 +192,6 @@ function animate() {
         targetQuaternion.copy(manualQuaternion);
     }
 
-    // Smooth spherical interpolation (slerp) for seamless rotation without jumps
     currentCameraQuaternion.slerp(targetQuaternion, 0.15);
     camera.quaternion.copy(currentCameraQuaternion);
 

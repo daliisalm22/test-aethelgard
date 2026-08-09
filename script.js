@@ -78,6 +78,7 @@ for (let i = 0; i < numMemories; i++) {
 let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
 
+// Offsets combined from mouse drag and phone orientation
 let manualRotationY = 0;
 let manualRotationX = 0;
 
@@ -90,10 +91,7 @@ let initialAlpha = null;
 let initialBeta = null;
 let initialGamma = null;
 
-let lastAlpha = null;
-let accumulatedAlphaOffset = 0;
-
-// Mouse & Touch Drag Listeners
+// Mouse & Touch Drag Listeners (Always active)
 window.addEventListener('mousedown', (e) => { 
     if (e.target.closest('.interactive')) return;
     isMouseDown = true; 
@@ -164,26 +162,17 @@ function handleOrientation(e) {
         initialAlpha = e.alpha;
         initialBeta = e.beta;
         initialGamma = e.gamma;
-        lastAlpha = e.alpha;
-        accumulatedAlphaOffset = 0;
     }
-
-    // Calculate continuous delta across the 360° / 0° wrap-around boundary smoothly
-    let deltaAlpha = e.alpha - lastAlpha;
-    if (deltaAlpha > 180) deltaAlpha -= 360;
-    if (deltaAlpha < -180) deltaAlpha += 360;
-    
-    accumulatedAlphaOffset += deltaAlpha;
-    lastAlpha = e.alpha;
 
     if (alphaElem) alphaElem.textContent = e.alpha.toFixed(1);
     if (betaElem) betaElem.textContent = e.beta.toFixed(1);
     if (gammaElem) gammaElem.textContent = e.gamma.toFixed(1);
 
+    let deltaAlpha = e.alpha - initialAlpha;
     let deltaBeta = e.beta - initialBeta;
     let deltaGamma = e.gamma - initialGamma;
 
-    tiltRotationY = THREE.MathUtils.degToRad(-accumulatedAlphaOffset);
+    tiltRotationY = THREE.MathUtils.degToRad(-deltaAlpha);
     tiltRotationX = THREE.MathUtils.degToRad(deltaBeta);
     tiltRotationZ = THREE.MathUtils.degToRad(-deltaGamma);
 }

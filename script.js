@@ -7,7 +7,7 @@ const state = {
     selectedStar: null,
     holdProgress: 0,
     selectedCategory: 'all',
-    starGlowColor: '#dad6fa',
+    starGlowColor: '#dad6fb',
     motionActive: false,
     audio: {
         musicOn: true,

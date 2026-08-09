@@ -1,4 +1,4 @@
-import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+import * as THREE from 'three';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x030816);
@@ -17,8 +17,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Sterne generieren
-const numStars = 1500;
+const numStars = 2000;
 const bubbleRadius = 1500;
 const starGeometry = new THREE.BufferGeometry();
 const starPositions = new Float32Array(numStars * 3);
@@ -36,31 +35,36 @@ for (let i = 0; i < numStars; i++) {
 }
 
 starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-const starMaterial = new THREE.PointsMaterial({ color: 0xf1edee, size: 6, sizeAttenuation: true });
+
+const starMaterial = new THREE.PointsMaterial({ color: 0xf1edee, size: 5, sizeAttenuation: true, transparent: true, opacity: 0.8 });
 const starField = new THREE.Points(starGeometry, starMaterial);
 scene.add(starField);
 
-// Erinnerungs-Sterne generieren
 const memoryStars = [];
-const numMemories = 40;
+const numMemories = 45;
 const sampleMemories = [
     "A quiet night under the old observatory.",
     "First lines of code that actually compiled.",
-    "Looking for constellations that didn't exist."
+    "Looking for constellations that didn't exist.",
+    "We promised to meet again when the comets return.",
+    "Whispering secrets into the digital void.",
+    "The universe is vast, but I found your orbit."
 ];
 
-const memoryGeo = new THREE.SphereGeometry(10, 16, 16);
+const memoryGeo = new THREE.SphereGeometry(12, 24, 24);
 const lilacShades = [0xdad6fa, 0xb2afd0, 0x797a96, 0x5d5777, 0x9b8fc9, 0xc4bffa];
 
-for (let i = 0; i < numMemories; i++) {
+function createMemoryStarNode(messageText, hexColor = 0xdad6fa) {
     const u = Math.random();
     const v = Math.random();
     const theta = u * 2.0 * Math.PI;
     const phi = Math.acos(2.0 * v - 1.0);
-    const r = (bubbleRadius * 0.8) * Math.cbrt(Math.random());
+    const r = (bubbleRadius * 0.75) * Math.cbrt(Math.random());
 
-    const randomLilac = lilacShades[Math.floor(Math.random() * lilacShades.length)];
-    const material = new THREE.MeshBasicMaterial({ color: randomLilac });
+    const material = new THREE.MeshBasicMaterial({ 
+        color: hexColor,
+        wireframe: false
+    });
     const memoryStar = new THREE.Mesh(memoryGeo, material);
     memoryStar.position.set(
         r * Math.sin(phi) * Math.cos(theta),
@@ -69,39 +73,52 @@ for (let i = 0; i < numMemories; i++) {
     );
     
     memoryStar.userData = {
-        message: sampleMemories[Math.floor(Math.random() * sampleMemories.length)]
+        message: messageText
     };
 
     scene.add(memoryStar);
     memoryStars.push(memoryStar);
 }
 
-// Steuerung variablen
+for (let i = 0; i < numMemories; i++) {
+    const msg = sampleMemories[Math.floor(Math.random() * sampleMemories.length)];
+    const randomLilac = lilacShades[Math.floor(Math.random() * lilacShades.length)];
+    createMemoryStarNode(msg, randomLilac);
+}
+
 let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
+let targetRotationX = 0, targetRotationY = 0;
+let rotationX = 0, rotationY = 0;
 
-let manualYaw = 0;
-let manualPitch = 0;
-
-let rawAlpha = 0;
-let rawBeta = 0;
-let rawGamma = 0;
-let motionActive = false;
-
-// Maus- / Touch-Fallback
 window.addEventListener('mousedown', (e) => { 
-    if (e.target.closest('.interactive')) return;
-    if (motionActive) return;
+    if(e.target.closest('.interactive')) return;
     isMouseDown = true; 
     mouseX = e.clientX; 
     mouseY = e.clientY; 
 });
 
 window.addEventListener('mousemove', (e) => {
-    if (!isMouseDown || motionActive) return;
-    manualYaw -= (e.clientX - mouseX) * 0.003;
-    manualPitch += (e.clientY - mouseY) * 0.003;
-    manualPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualPitch));
+    const crosshair = document.getElementById('crosshair');
+    
+    const raycaster = new THREE.Raycaster();
+    const mouseCoords = new THREE.Vector2(
+        (e.clientX / window.innerWidth) * 2 - 1,
+        -(e.clientY / window.innerHeight) * 2 + 1
+    );
+    raycaster.setFromCamera(mouseCoords, camera);
+    const intersects = raycaster.intersectObjects(memoryStars);
+
+    if (intersects.length > 0) {
+        crosshair.classList.add('hovered');
+    } else {
+        crosshair.classList.remove('hovered');
+    }
+
+    if (!isMouseDown) return;
+    targetRotationY += (e.clientX - mouseX) * 0.003;
+    targetRotationX += (e.clientY - mouseY) * 0.003;
+    targetRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, targetRotationX));
     mouseX = e.clientX; 
     mouseY = e.clientY;
 });
@@ -109,8 +126,7 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', () => { isMouseDown = false; });
 
 window.addEventListener('touchstart', (e) => {
-    if (e.target.closest('.interactive')) return;
-    if (motionActive) return;
+    if(e.target.closest('.interactive')) return;
     if (e.touches.length === 1) { 
         isMouseDown = true; 
         mouseX = e.touches[0].clientX; 
@@ -119,39 +135,73 @@ window.addEventListener('touchstart', (e) => {
 });
 
 window.addEventListener('touchmove', (e) => {
-    if (!isMouseDown || motionActive || e.touches.length !== 1) return;
-    manualYaw -= (e.touches[0].clientX - mouseX) * 0.003;
-    manualPitch += (e.touches[0].clientY - mouseY) * 0.003;
-    manualPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, manualPitch));
+    if (!isMouseDown || e.touches.length !== 1) return;
+    targetRotationY += (e.touches[0].clientX - mouseX) * 0.003;
+    targetRotationX += (e.touches[0].clientY - mouseY) * 0.003;
+    targetRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, targetRotationX));
     mouseX = e.touches[0].clientX; 
     mouseY = e.touches[0].clientY;
 });
 
 window.addEventListener('touchend', () => { isMouseDown = false; });
 
-// Gyroskop Event Listener
-const permissionBtn = document.getElementById('enableGyroBtn') || document.getElementById('request-permission-btn');
-const alphaElem = document.getElementById('alpha') || document.getElementById('debugAlpha');
-const betaElem = document.getElementById('beta') || document.getElementById('debugBeta');
-const gammaElem = document.getElementById('gamma') || document.getElementById('debugGamma');
+window.addEventListener('click', (e) => {
+    if(e.target.closest('.interactive')) return;
 
-function handleOrientation(event) {
-    rawAlpha = event.alpha !== null ? event.alpha : 0;
-    rawBeta = event.beta !== null ? event.beta : 0;
-    rawGamma = event.gamma !== null ? event.gamma : 0;
+    const raycaster = new THREE.Raycaster();
+    const mouseCoords = new THREE.Vector2(
+        (e.clientX / window.innerWidth) * 2 - 1,
+        -(e.clientY / window.innerHeight) * 2 + 1
+    );
+    raycaster.setFromCamera(mouseCoords, camera);
+    const intersects = raycaster.intersectObjects(memoryStars);
 
-    if (alphaElem) alphaElem.innerText = Math.round(rawAlpha);
-    if (betaElem) betaElem.innerText = Math.round(rawBeta);
-    if (gammaElem) gammaElem.innerText = Math.round(rawGamma);
-
-    if (event.beta !== null || event.gamma !== null) {
-        motionActive = true;
+    if (intersects.length > 0) {
+        const selectedStar = intersects[0].object;
+        const message = selectedStar.userData.message;
+        
+        document.getElementById('memory-text').textContent = `"${message}"`;
+        document.getElementById('memory-modal').classList.add('active');
     }
-}
+});
 
-if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== 'function') {
-    window.addEventListener('deviceorientation', handleOrientation);
-}
+document.getElementById('close-modal-btn').addEventListener('click', () => {
+    document.getElementById('memory-modal').classList.remove('active');
+});
+
+const horizonBtn = document.getElementById('new-horizon-btn');
+const subModal = document.getElementById('submission-modal');
+const closeSubBtn = document.getElementById('close-sub-btn');
+const submitMemBtn = document.getElementById('submit-memory-btn');
+const userMemInput = document.getElementById('user-memory-input');
+const starColorPicker = document.getElementById('star-color-picker');
+
+horizonBtn.addEventListener('click', () => {
+    subModal.classList.add('active');
+});
+
+closeSubBtn.addEventListener('click', () => {
+    subModal.classList.remove('active');
+});
+
+submitMemBtn.addEventListener('click', () => {
+    const val = userMemInput.value.trim();
+    const hexVal = starColorPicker.value;
+    if(val) {
+        createMemoryStarNode(val, hexVal);
+        userMemInput.value = '';
+        subModal.classList.remove('active');
+    }
+});
+
+const permissionBtn = document.getElementById('request-permission-btn');
+const alphaElem = document.getElementById('alpha');
+const betaElem = document.getElementById('beta');
+const gammaElem = document.getElementById('gamma');
+let targetDeviceQuat = new THREE.Quaternion();
+let currentDeviceQuat = new THREE.Quaternion();
+let lastAlpha = null;
+let accumulatedAlpha = 0;
 
 if (permissionBtn) {
     permissionBtn.addEventListener('click', () => {
@@ -159,48 +209,75 @@ if (permissionBtn) {
             DeviceOrientationEvent.requestPermission()
                 .then(response => {
                     if (response === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation, true);
                         permissionBtn.style.display = 'none';
-                        window.addEventListener('deviceorientation', handleOrientation);
-                    } else {
-                        alert("Permission denied for motion sensors.");
                     }
                 })
                 .catch(console.error);
         } else {
+            window.addEventListener('deviceorientation', handleOrientation, true);
             permissionBtn.style.display = 'none';
-            if (window.DeviceOrientationEvent) {
-                window.addEventListener('deviceorientation', handleOrientation);
-            }
         }
     });
 }
 
-let currentCameraQuaternion = new THREE.Quaternion();
-const targetQuaternion = new THREE.Quaternion();
+function handleOrientation(e) {
+    if (e.alpha === null || e.beta === null || e.gamma === null) return;
+
+    if (lastAlpha === null) {
+        lastAlpha = e.alpha;
+        accumulatedAlpha = e.alpha;
+    }
+
+    let deltaAlpha = e.alpha - lastAlpha;
+    if (deltaAlpha > 180) deltaAlpha -= 360;
+    if (deltaAlpha < -180) deltaAlpha += 360;
+    accumulatedAlpha += deltaAlpha;
+    lastAlpha = e.alpha;
+
+    const alpha = THREE.MathUtils.degToRad(accumulatedAlpha);
+    const beta = THREE.MathUtils.degToRad(e.beta);
+    const gamma = THREE.MathUtils.degToRad(e.gamma);
+
+    if (alphaElem) alphaElem.textContent = accumulatedAlpha.toFixed(1);
+    if (betaElem) betaElem.textContent = e.beta.toFixed(1);
+    if (gammaElem) gammaElem.textContent = e.gamma.toFixed(1);
+
+    const zee = new THREE.Vector3(0, 0, 1);
+    const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
+    const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+    const q = new THREE.Quaternion().setFromEuler(euler);
+    const qOrient = new THREE.Quaternion().setFromAxisAngle(zee, -orient);
+    q.multiply(qOrient);
+    const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    q.premultiply(qAdjust);
+
+    targetDeviceQuat.copy(q);
+}
 
 function animate() {
     requestAnimationFrame(animate);
 
-    if (motionActive) {
-        const alpha = THREE.MathUtils.degToRad(rawAlpha);
-        const beta = THREE.MathUtils.degToRad(rawBeta);
-        const gamma = THREE.MathUtils.degToRad(rawGamma);
-
-        const qEuler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-        targetQuaternion.setFromEuler(qEuler);
-
-        const correction = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-        targetQuaternion.multiply(correction);
-
-        currentCameraQuaternion.slerp(targetQuaternion, 0.2);
-        camera.quaternion.copy(currentCameraQuaternion);
+    if (!permissionBtn || permissionBtn.style.display !== 'none') {
+        currentDeviceQuat.slerp(targetDeviceQuat, 0.15);
+        camera.quaternion.copy(currentDeviceQuat);
     } else {
-        const manualQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
-        currentCameraQuaternion.slerp(manualQuaternion, 0.15);
-        camera.quaternion.copy(currentCameraQuaternion);
+        rotationY += (targetRotationY - rotationY) * 0.05;
+        rotationX += (targetRotationX - rotationX) * 0.05;
+        camera.rotation.order = 'YXZ';
+        camera.rotation.y = rotationY;
+        camera.rotation.x = rotationX;
     }
 
-    starField.rotation.y += 0.0005;
+    starField.rotation.y += 0.0002;
+    
+    const time = Date.now() * 0.003;
+    memoryStars.forEach((star, index) => {
+        const scaleFactor = 1 + Math.sin(time + index) * 0.15;
+        star.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    });
+
     renderer.render(scene, camera);
 }
 

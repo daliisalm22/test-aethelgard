@@ -1,38 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <link rel="stylesheet" href="style.css">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>. ݁˖ .⋆ ݁｡˚⋆AETHELGARD⋆˚｡⋆. ݁˖ .࣪</title>
-        <link rel="icon" type="image/png" href="star.ico">
-        <script type="module" src="script.js"></script>
-    </head>
-    <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>. ݁˖ .⋆ ݁｡˚⋆AETHELGARD⋆˚｡⋆. ݁˖ .࣪</title>
+    <link rel="icon" type="image/png" href="star.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
+        }
+      }
+    </script>
+</head>
+<body>
 
-        <div id="canvas-container"></div>
+    <div id="canvas-container"></div>
+    <div class="crosshair" id="crosshair"></div>
 
-        <div class="app-text">
-            <div class="app-header">
-                <h1 class="app-title">˚⋆AETHELGARD⋆˚</h1>
-                <p class="app-subtitle">
-                    LOOK UP! Do u see the stars? U can inspect the memories hidden 
-                    behind the bigger stars or add ur own ones under "new horizon"
-                </p>
+    <div class="ui-layer">
+        <div class="app-header interactive">
+            <h1 class="app-title">˚⋆AETHELGARD⋆˚</h1>
+            <p class="app-subtitle">LOOK UP! inspect the lilac memories hidden behind the glowing stars or add your own coordinates under "new horizon".</p>
+        </div>
+
+        <div class="controls-wrapper">
+            <div class="glass-panel glass-card interactive">
+                <h2>device orientation</h2>
+                <p><strong>alpha (Z):</strong> <span id="alpha">0</span>°</p>
+                <p><strong>beta (X):</strong> <span id="beta">0</span>°</p>
+                <p><strong>gamma (Y):</strong> <span id="gamma">0</span>°</p>
             </div>
 
-            <div class="gyro-container">
-                <button id="request-permission-btn" class="gyro-button">
-                    ˖⁺‧₊˚✦ Enable phone tilt!!
+            <div class="action-buttons interactive">
+                <button id="new-horizon-btn" class="aesthetic-btn">
+                    ✦ new horizon (add secret)
+                </button>
+                <button id="request-permission-btn" class="aesthetic-btn">
+                    ˖⁺‧₊˚✦ enable phone tilt
                 </button>
             </div>
         </div>
+    </div>
 
-        <div class="glass-card">
-            <h2>Device Orientation</h2>
-            <p><strong>Alpha (Z):</strong> <span id="alpha">0</span>°</p>
-            <p><strong>Beta (X):</strong> <span id="beta">0</span>°</p>
-            <p><strong>Gamma (Y):</strong> <span id="gamma">0</span>°</p>
+    <div id="memory-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>✦ memory recovered ✦</h3>
+            <p id="memory-text">"A quiet night under the old observatory."</p>
+            <button class="close-modal" id="close-modal-btn">return to sky</button>
         </div>
-    </body>
+    </div>
+
+    <div id="submission-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>✦ new horizon ✦</h3>
+            <p style="font-size: 0.85rem; margin: 10px 0; color: var(--lilac1);"> etch your memory into the permanent cosmos. </p>
+            <textarea id="user-memory-input" placeholder="type your secret or memory here..."></textarea>
+            
+            <div class="color-picker-wrapper">
+                <label for="star-color-picker">star glow color:</label>
+                <input type="color" id="star-color-picker" value="#dad6fa">
+            </div>
+
+            <button class="aesthetic-btn" id="submit-memory-btn" style="margin: 10px auto 0 auto;">launch star</button>
+            <button class="close-modal" id="close-sub-btn" style="margin-top: 15px;">cancel</button>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
 </html>

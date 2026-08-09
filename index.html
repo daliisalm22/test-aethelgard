@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>. ݁˖ .⋆ ݁｡˚⋆AETHELGARD⋆˚｡⋆. ݁˖ .࣪</title>
     <link rel="icon" type="image/png" href="star.ico">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500&family=Syne:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script type="importmap">
       {
@@ -16,14 +19,36 @@
     </script>
 </head>
 <body>
+    <div class="space-bg">
+        <div class="nebula nebula-1"></div>
+        <div class="nebula nebula-2"></div>
+        <div class="nebula nebula-3"></div>
+        <canvas id="particle-canvas"></canvas>
+    </div>
 
     <div id="canvas-container"></div>
     <div class="crosshair" id="crosshair"></div>
 
+    <div class="hold-progress" id="hold-progress">
+        <svg viewBox="0 0 80 80">
+            <circle class="hold-progress-track" cx="40" cy="40" r="36" fill="none" stroke-width="4"/>
+            <circle class="hold-progress-bar" id="hold-progress-bar" cx="40" cy="40" r="36" fill="none" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <span class="hold-progress-text" id="hold-progress-text"></span>
+    </div>
+
     <div class="ui-layer">
         <div class="app-header interactive">
             <h1 class="app-title">˚⋆AETHELGARD⋆˚</h1>
-            <p class="app-subtitle">LOOK UP! inspect the lilac memories hidden behind the glowing stars or add your own coordinates under "new horizon".</p>
+            <p class="app-subtitle">LOOK UP! press &amp; hold a glowing star to reveal its memories — or add your own coordinates under "new horizon".</p>
+
+            <div class="category-pills" id="category-pills">
+                <button class="pill active" data-category="all">All</button>
+                <button class="pill" data-category="zodiac">Zodiac</button>
+                <button class="pill" data-category="mythology">Mythology</button>
+                <button class="pill" data-category="bright">Bright Stars</button>
+                <button class="pill" data-category="featured">Featured</button>
+            </div>
         </div>
 
         <div class="controls-wrapper">
@@ -32,15 +57,58 @@
                 <p><strong>alpha (Z):</strong> <span id="alpha">0</span>°</p>
                 <p><strong>beta (X):</strong> <span id="beta">0</span>°</p>
                 <p><strong>gamma (Y):</strong> <span id="gamma">0</span>°</p>
+                <div class="audio-controls">
+                    <div class="audio-row">
+                        <span class="audio-label">music</span>
+                        <button id="music-toggle" class="audio-toggle on" title="Toggle ambient music">♪</button>
+                    </div>
+                    <div class="audio-row">
+                        <span class="audio-label">sfx</span>
+                        <button id="sfx-toggle" class="audio-toggle on" title="Toggle sound effects">🔊</button>
+                    </div>
+                    <div class="audio-row">
+                        <span class="audio-label">volume</span>
+                        <input type="range" id="volume-slider" min="0" max="100" value="70">
+                    </div>
+                </div>
             </div>
 
             <div class="action-buttons interactive">
                 <button id="new-horizon-btn" class="aesthetic-btn">
-                    ✦ new horizon (add secret)
+                    ✦ new horizon (add memory/idea/achievement)
                 </button>
                 <button id="request-permission-btn" class="aesthetic-btn">
                     ˖⁺‧₊˚✦ enable phone tilt
                 </button>
+
+                <button id="glow-color-btn" class="aesthetic-btn glow-btn" title="Change star glow color">
+                    <span class="glow-swatch" id="glow-swatch"></span> star glow color
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="details-panel" class="details-panel">
+        <button class="details-close" id="details-close" aria-label="Close">✕</button>
+        <div class="details-image-wrap">
+            <img id="details-image" alt="" loading="lazy" class="details-image hidden">
+            <div class="details-image-fallback hidden" id="details-image-fallback">✦</div>
+        </div>
+        <h3 id="details-title">star</h3>
+        <span class="details-category" id="details-category"></span>
+        <p id="details-text"></p>
+        <div class="details-actions">
+            <button class="aesthetic-btn danger-btn" id="delete-btn">✕ delete this star</button>
+        </div>
+    </div>
+
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>✦ delete this star? ✦</h3>
+            <p id="delete-text">This memory will be lost from the cosmos forever.</p>
+            <div class="delete-actions">
+                <button class="aesthetic-btn danger-btn" id="confirm-delete-btn">yes, erase it</button>
+                <button class="close-modal" id="cancel-delete-btn">keep it</button>
             </div>
         </div>
     </div>
@@ -58,10 +126,20 @@
             <h3>✦ new horizon ✦</h3>
             <p style="font-size: 0.85rem; margin: 10px 0; color: var(--lilac1);"> etch your memory into the permanent cosmos. </p>
             <textarea id="user-memory-input" placeholder="type your secret or memory here..."></textarea>
-            
+
             <div class="color-picker-wrapper">
                 <label for="star-color-picker">star glow color:</label>
                 <input type="color" id="star-color-picker" value="#dad6fa">
+            </div>
+
+            <div class="category-select-wrapper">
+                <label for="new-star-category">category:</label>
+                <select id="new-star-category">
+                    <option value="featured">Featured</option>
+                    <option value="zodiac">Zodiac</option>
+                    <option value="mythology">Mythology</option>
+                    <option value="bright">Bright Stars</option>
+                </select>
             </div>
 
             <button class="aesthetic-btn" id="submit-memory-btn" style="margin: 10px auto 0 auto;">launch star</button>

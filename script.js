@@ -81,7 +81,9 @@ let manualYaw = 0;
 let manualPitch = 0;
 
 let isTiltActive = false;
-let deviceOrientation = { alpha: 0, beta: 0, gamma: 0 };
+let deviceHeading = 0;
+let devicePitch = 0;
+let deviceRoll = 0;
 let hasDeviceOrientation = false;
 
 window.addEventListener('mousedown', (e) => { 
@@ -154,9 +156,9 @@ function handleOrientation(e) {
     if (betaElem) betaElem.textContent = e.beta.toFixed(1);
     if (gammaElem) gammaElem.textContent = e.gamma.toFixed(1);
 
-    deviceOrientation.alpha = THREE.MathUtils.degToRad(e.alpha);
-    deviceOrientation.beta = THREE.MathUtils.degToRad(e.beta);
-    deviceOrientation.gamma = THREE.MathUtils.degToRad(e.gamma);
+    deviceHeading = THREE.MathUtils.degToRad(e.alpha);
+    devicePitch = THREE.MathUtils.degToRad(e.beta - 90);
+    deviceRoll = THREE.MathUtils.degToRad(e.gamma);
     hasDeviceOrientation = true;
 }
 
@@ -168,22 +170,12 @@ function animate() {
     let targetQuaternion = new THREE.Quaternion();
 
     if (isTiltActive && hasDeviceOrientation) {
-        const alpha = deviceOrientation.alpha;
-        const beta = deviceOrientation.beta;
-        const gamma = deviceOrientation.gamma;
-
-        const zee = new THREE.Vector3(0, 0, 1);
-        const orient = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
-
-        const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
-        const qDevice = new THREE.Quaternion().setFromEuler(euler);
-        const qOrient = new THREE.Quaternion().setFromAxisAngle(zee, -orient);
-        qDevice.multiply(qOrient);
-        const qAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-        qDevice.premultiply(qAdjust);
+        const qSky = new THREE.Quaternion();
+        const euler = new THREE.Euler(-devicePitch, -deviceHeading, deviceRoll, 'YXZ');
+        qSky.setFromEuler(euler);
 
         const qManual = new THREE.Quaternion().setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
-        targetQuaternion.copy(qDevice).multiply(qManual);
+        targetQuaternion.copy(qSky).multiply(qManual);
     } else {
         targetQuaternion.setFromEuler(new THREE.Euler(manualPitch, manualYaw, 0, 'YXZ'));
     }
